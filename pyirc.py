@@ -1,3 +1,7 @@
+"""
+Back end routines for solid-waffle.
+"""
+
 import sys
 import numpy
 import scipy
@@ -19,15 +23,30 @@ Test_SubBeta = False
 
 # <== THESE FUNCTIONS DEPEND ON THE FORMAT OF THE INPUT FILES ==>
 
-# Version number of script
 def get_version():
-  return 36
+  """Version number of script"""
+  return 37
 
-# Function to get array size from format codes in load_segment
-# (Note: for WFIRST this will be 4096, but we want the capability to
-# run this script on H1/H2RG data.)
-#
 def get_nside(formatpars):
+  """
+  Function to get array size from format codes.
+
+  Parameters
+  ----------
+  formatpars : int
+      Format code.
+
+  Returns
+  -------
+  int
+      The array size (including reference pixels).
+
+  Notes
+  -----
+  This is 4096 for Roman, but we have codes that enable us to run the script on H2RG data.
+
+  """
+
   if formatpars==1: return 4096
   if formatpars==2: return 2048
   if formatpars==3: return 4096
@@ -57,18 +76,37 @@ def get_num_slices(formatpars, filename):
     exit()
   return ntslice
 
-# Function to load an image segment
-#
-# filename = name of the source FITS file
-# formatpars = integer describing which type of format to use
-#     format 1: H4RG, all data in a single HDU, ramp slope positive (ex. DCL H4RG-18237 data)
-# xyrange = list [xmin,xmax,ymin,ymax] (first row/col are zero) -- EXcluding xmax and ymax!
-# tslices = list of time slices to use (first is *1*)
-# verbose = True or False (use True only for de-bugging)
-#
-# Returns a 3D array of dimension number tslices, ymax-ymin, xmax-xmin
-#
 def load_segment(filename, formatpars, xyrange, tslices, verbose):
+  """
+  Function to load an image segment.
+
+  Parameters
+  ----------
+  filename : str
+      Name of the source FITS file.
+  formatpars : int
+      Format code.
+  xyrange : list of int
+      List in the form ``[xmin,xmax,ymin,ymax]``.
+      Numpy convention so the first row & column are 0, and excludes xmax and ymax.
+  tslices : list of int
+      Time slices to use (beginning slice is 1).
+  verbose : bool
+      Whether to print a lot of outputs.
+
+  Returns
+  -------
+  np.array of float
+      A 3D array of the data, shape (len(`tslices`), ymax-ymin, xmax-xmin).
+      All formats are in "ramp slope negative" format (digital saturation is 0).
+
+  Notes
+  -----
+  Floating-point return type was chosen instead of the native uint16 so that differences
+  don't underflow to 65535 minus a small number. But integers are exactly represented.
+
+  """
+
   if verbose: print ('Reading:', filename)
 
   # Recommended True (False defaults to astropy tools, which work but are slow because of the way this script works)
@@ -164,9 +202,76 @@ def load_segment(filename, formatpars, xyrange, tslices, verbose):
 
 # <== FUNCTIONS BELOW HERE ARE INDEPENDENT OF THE INPUT FORMAT ==>
 
-# Dictionary of indices
-# These are designed for consistency with the outputs lists of certain functions
 class IndexDictionary:
+  """
+  Table of indices.
+
+  These are designed for consistency with the outputs lists of certain functions.
+
+
+  Parameters
+  ----------
+  itype : int
+      Index type (currently only accepts 0).
+
+  Attributes
+  ----------
+  N : int
+      Number of parameters.
+  Nb : int
+      Number of "basic" parameters.
+  Nbb : int
+      Number of "basic" + BFE parameters.
+  p : int, optional
+      Number of non-linearity coefficients (polynomial order is `p` + 1).
+  ngood : int
+      Column number for how many pixels in a sub-pixel are good.
+  graw : int
+      Column number for raw gain.
+  gacorr : int
+      Column number for IPC-corrected gain.
+  g : int
+      Column number for best estimate of the gain.
+  alphaH : int
+      Column number for horizontal IPC.
+  alphaV : int
+      Column number for vertical IPC.
+  beta : int
+      Column number for non-linearity parameter (in inverse electrons).
+  I : int
+      Column number for flat intensity in e/p/s.
+  alphaD : int
+      Column number for diagonal IPC.
+  tCH : int
+      Column number for horizontal pixel-pixel covariance.
+  tCV : int
+      Column number for vertical pixel-pixel covariance.
+  ker0 : int, optional
+      Column number for the (0,0) position in the BFE kernel.
+  s : int, optional
+      Size of BFE kernel (range on both axes is from -`s` to +`s`, inclusive).
+
+  Methods
+  -------
+  addbfe
+      Adds columns for BFE kernel.
+  addhnl
+      Adds columns for higher-order non-linearity kernel.
+
+  Notes
+  -----
+  Additional columns:
+  - If BFE is enabled:
+    the column numbers for the BFE kernel (dx,dy) are `ker0 + dy*(2s+1) + dx`.
+  - If non-linearity is enabled:
+    The column numbers
+    for the higher-order linearity terms are that the degree ``d`` term is in column
+    ``Nbb + d-2``.
+
+  It is not allowed to add non-linearity and then BFE.
+
+  """
+
   def __init__(self, itype):
     # basic characterization parameter index list -- outputs for "basic" function
     if itype==0:
@@ -193,26 +298,73 @@ class IndexDictionary:
       #
       self.N = self.Nbb = self.Nb
 
-  # adds BFE kernel, (2s+1) x (2s+1)
   def addbfe(self, s):
+    """
+    Adds columns for the BFE kernel (the size is (2s+1, 2s+1), but flattened).
+
+    Parameters
+    ----------
+    s : int
+        Size of kernel (dx and dy range from -`s` to +`s`).
+
+    Returns
+    -------
+    None
+
+    """
+
     self.s = s
     self.ker0 = self.Nb + 2*s*(s+1)  # BFE (0,0) kernel index
     self.Nbb += (2*s+1)*(2*s+1)
     self.N += (2*s+1)*(2*s+1)
+    if hasattr(self, "p"):
+        raise ValueError("Should add BFE columns first, then non-linearity.")
 
-  # adds higher-order non-linearity coefficients (p coefs, for total degree 1+p)
   def addhnl(self, p):
+    """
+    Adds columns for higher-order non-linearity coefficients (p coefs, for total degree 1+p).
+
+    Parameters
+    ----------
+    p : int
+        Number of non-linearity coefficients (starts at degree 2 since 0 and 1 are linear,
+        so the total degree is 1+p).
+
+    Returns
+    -------
+    None
+
+    """
+
     self.p = p
     self.N += p
 
-swi = IndexDictionary(0)
+swi = IndexDictionary(0) # basic solid-waffle index list
 
-# Routine to get percentile cuts with a mask removed
-# disc flag if True (default) tells the code to interpolate based on the assumption
-# that the input data are integers
-#
-# mask consists of 0's and 1's and is the same size as this_array
 def pyIRC_percentile(this_array, mask, perc, disc=True):
+  """
+  Routine to get percentile cuts with a mask removed.
+
+  Parameters
+  ----------
+  this_array : np.array
+      The array from which we want percentiles.
+  mask : np.array of bool or int
+      The mask (True or >=1 for good pixels, False or <=0 for bad).
+      Must be the same size as `this_array`. (Usually they are the same
+      shape, but this is not strictly necessary since they are flattened.)
+  perc : float
+      The desired percentile (between 0 and 100).
+  disc : bool, optional
+      Interpolate a percentile based on the input data being discrete?
+
+  Returns
+  -------
+  float
+      Masked percentile of `this_array`.
+
+  """
+
   val = this_array.flatten()
   ma = mask.flatten()
   w = numpy.array([val[x] for x in numpy.where(ma>.5)])
@@ -228,31 +380,79 @@ def pyIRC_percentile(this_array, mask, perc, disc=True):
   #w -= numpy.modf(numpy.linspace(0,(1.+numpy.sqrt(5.))/2*(n-1), num=n))[0] - .5
   return numpy.percentile(w,perc)
 
-# Routine to get mean with a mask removed
 def pyIRC_mean(this_array, mask):
+  """
+  Routine to get mean with a mask removed.
+
+  Parameters
+  ----------
+  this_array : np.array
+      The array from which we want percentiles.
+  mask : np.array of bool or int
+      The mask (True or >=1 for good pixels, False or <=0 for bad).
+      Must be the same size as `this_array`. (Usually they are the same
+      shape, but this is not strictly necessary since they are flattened.)
+
+  Returns
+  -------
+  float
+      The mean of the masked array.
+
+  """
+
   val = this_array.flatten()
   ma = mask.flatten()
   w = numpy.array([val[x] for x in numpy.where(ma>.5)])
   return numpy.mean(w)
 
-# Get reference corrections from left & right pixel sets
-# yrange = [ymin,ymax] (inclusive)
-#
-# Output depends on the length of tslices:
-#  elements 0 .. ntslice_use-1 -> median of that time slice
-#  elements ntslice_use .. 2*ntslice_use-1 -> median of (first) - (this slice)
-#  (if ntslice_use>=2) then
-#    element 2*ntslice_use -> median of [(-2) - (-1)] - [(0) - (1)] (otherwise this is 0)
-#    [this is really used to measure curvature of the reference pixel ramp]
-#
-# output always has length 2*ntslice_use+1
-#
 def ref_corr(filename, formatpars, yrange, tslices, verbose):
+  """
+  Get reference corrections from left & right pixel sets.
+
+  Parameters
+  ----------
+  filename : str
+      The input file name.
+  formatpars : int
+      The input format.
+  yrange : list of int
+      The minimum and maximum row number, ``yrange[0]<=y<yrange[1]``.
+  tslices : list of int
+      A list of the time slices to use in ascending order (first in the file is 1).
+  verbose : bool
+      Whether to talk a lot.
+
+  Returns
+  -------
+  output_ref : list of np.array
+      A list of reference pixel corrections in these rows. There are 2*``ntslices``+1
+      entries, each a 1D numpy array (where ``ntslices`` is the length of `tslices`).
+
+  Notes
+  -----
+  The contents of `output_ref` are as follows.
+  In pseudocode where ``S[j]`` refers to the signal in time
+  slice ``ntslices[j]``:
+
+  - In all cases, the first ``ntslices`` elements are the median of the corresponding
+    time slice, i.e., ``output_ref[j]`` is the median of ``S[j]``.
+
+  - The next ``ntslices`` elements are the medians of the difference frames, i.e.,
+    ``output_ref[ntslices+j]`` is the median of the difference of slices
+    ``S[0]-S[j]``.
+
+  - If there are at least 2 slices, then the last element is the median of the double difference
+    ``(D[-2]-D[-1]) - (D[0]-D[1])``. Otherwise it is zero.
+    (This is mainly used to measure curvature of the reference pixel ramp.)
+
+  Both the left and right side reference pixels are used and medianed together.
+
+  """
 
   # Side length of the array (needed to find reference pixel indexing)
   N = get_nside(formatpars)
   # Number of time slices
-  ntslice_use = len(tslices)
+  ntslices = len(tslices)
   # Clear list
   output_ref = []
 
@@ -265,38 +465,72 @@ def ref_corr(filename, formatpars, yrange, tslices, verbose):
   my_array_LR = numpy.concatenate((my_array_L, my_array_R), axis=2)
   if verbose: print (N, my_array_LR.shape)
 
-  for ts in range(ntslice_use):
+  for ts in range(ntslices):
     output_ref.append(numpy.median(my_array_LR[ts,:,:]))
-  for ts in range(ntslice_use):
+  for ts in range(ntslices):
     diff_array = my_array_LR[0,:,:] - my_array_LR[ts,:,:]
     output_ref.append(numpy.median(diff_array))
-  if ntslice_use>1:
-    diff_array = my_array_LR[ntslice_use-2,:,:] - my_array_LR[ntslice_use-1,:,:]\
+  if ntslices>1:
+    diff_array = my_array_LR[ntslices-2,:,:] - my_array_LR[ntslices-1,:,:]\
                  -(my_array_LR[0,:,:]-my_array_LR[1,:,:])*(tslices[-1]-tslices[-2])/float(tslices[1]-tslices[0])
     output_ref.append(numpy.median(diff_array))
   else:
     output_ref.append(0)
   return output_ref
 
-#
-# Get reference corrections from left & right pixel sets
-# for a full list of files.
-# ny = number of y-bins (e.g. 32 for an H4RG and regions of 128 pixel size in y-direction)
-#
-# Output depends on the length of tslices:
-#  elements 0 .. ntslice_use-1 -> median of that time slice
-#  elements ntslice_use .. 2*ntslice_use-1 -> median of (first) - (this slice)
-#  (if ntslice_use>=2) then
-#    element 2*ntslice_use -> median of [(-2) - (-1)] - [(0) - (1)] (otherwise this is 0)
-#    [this is really used to measure curvature of the reference pixel ramp]
-#
-# output is stored in a numpy array of size num_files, ny, 2*ntslice_use+1
-#
 def ref_array(filelist, formatpars, ny, tslices, verbose):
+  """
+  Get reference corrections from left & right pixel sets
+  for a full list of files.
+
+  Parameters
+  ----------
+  filelist : list of str
+      The list of input files to use.
+  formatpars : int
+      The format parameter.
+  ny : int
+      Number of groups to bin the rows for making a list of reference pixels
+     (should be a power of 2).
+  tslices : list of int
+      A list of the time slices to use in ascending order (first in the file is 1).
+  verbose : bool
+      Whether to talk a lot.
+
+  Returns
+  -------
+  output_array : np.array
+      An array of the reference pixel information, including medians of differences.
+      The shape is (``num_files``, `ny`, 2*``ntslice_use``+1), where ``num_files`` is the
+      number of files in `filelist`; and ``ntslice_use`` is the number of time slices.
+
+      The indexing is that ``output_array[i,iy,j]`` is the median reference pixel in file
+      ``i``, in row group ``iy``, and in combination of time slices ``j`` (see notes since there
+      are more than ``ntslice_use`` options for ``j``).
+
+  Notes
+  -----
+  The combination of time slices (last axis of `output_array`) is as follows.
+  In pseudocode where ``S[j]`` refers to the signal in time
+  slice ``ntslices[j]``:
+
+  - In all cases, the first ``ntslices`` elements are the median of the corresponding
+    time slice, i.e., ``output_array[:,:,j]`` is the median of ``S[j]``.
+
+  - The next ``ntslices`` elements are the medians of the difference frames, i.e.,
+    ``output_array[:,:,ntslices+j]`` is the median of the difference of slices
+    ``S[0]-S[j]``.
+
+  - If there are at least 2 slices, then the last element ``output_array[:,:,-1]``
+    is the median of the double difference
+    ``(D[-2]-D[-1]) - (D[0]-D[1])``. Otherwise it is zero.
+    (This is mainly used to measure curvature of the reference pixel ramp.)
+
+  """
 
   num_files = len(filelist)
-  ntslice_use = len(tslices)
-  output_array = numpy.zeros((num_files, ny, 2*ntslice_use+1))
+  ntslices = len(tslices)
+  output_array = numpy.zeros((num_files, ny, 2*ntslices+1))
 
   dy = get_nside(formatpars)//ny
   for ifile in range(num_files):
@@ -309,13 +543,45 @@ def ref_array(filelist, formatpars, ny, tslices, verbose):
         print (output_array[ifile, iy, :])
 
   return(output_array)
-#
-# Similar but if we only need one row (iy) to be good
-# *** Only use this function if you are absolutely sure of what you need!
+
 def ref_array_onerow(filelist, formatpars, iy, ny, tslices, verbose):
+  """Similar to ref_array, but for one row being valid. Saves time if you
+  know you are only going to need that one row.
+
+  **Only use this function if you are absolutely sure you don't need the other rows!**
+
+  Parameters
+  ----------
+  filelist : list of str
+      The list of input files to use.
+  formatpars : int
+      The format parameter.
+  iy : int
+      Which row group (between 0 and `ny`-1) needs to be good.
+  ny : int
+      Number of groups to bin the rows for making a list of reference pixels
+     (should be a power of 2).
+  tslices : list of int
+      A list of the time slices to use in ascending order (first in the file is 1).
+  verbose : bool
+      Whether to talk a lot.
+
+  Returns
+  -------
+  output_array : np.array
+      An array of the reference pixel information, including medians of differences.
+
+  See Also
+  --------
+  ref_array
+      See for description of the `output_array` (with the warning that only that one
+      row group is going to be good).
+
+  """
+
   num_files = len(filelist)
-  ntslice_use = len(tslices)
-  output_array = numpy.zeros((num_files, ny, 2*ntslice_use+1))
+  ntslices = len(tslices)
+  output_array = numpy.zeros((num_files, ny, 2*ntslices+1))
   dy = get_nside(formatpars)//ny
   for ifile in range(num_files):
     ymin = dy*iy
@@ -325,14 +591,57 @@ def ref_array_onerow(filelist, formatpars, iy, ny, tslices, verbose):
       print (ifile, iy)
       print (output_array[ifile, iy, :])
   return(output_array)
-#
-# similar but uses a user-specified range of y-values, and output lacks the 'iy' index
-# (i.e. is 2D array)
+
 def ref_array_block(filelist, formatpars, yrange, tslices, verbose):
+  """
+  Extracts reference pixel data in a specified range of y values.
+
+  Parameters
+  ----------
+  filelist : list of str
+      The list of input files to use.
+  formatpars : int
+      The format parameter.
+  yrange : list or tuple of int
+      Which row range to extract; length 2 ( = ymin, ymax ), with usual Python
+      convention (extracts ymin<=y<ymax).
+  tslices : list of int
+      A list of the time slices to use in ascending order (first in the file is 1).
+  verbose : bool
+      Whether to talk a lot.
+
+  Returns
+  -------
+  output_array : np.array
+      A 2D array, shape (``num_files``, 2*``ntslices``+1).
+
+      The indexing is that ``output_array[i,j]`` is the median reference pixel in file
+      ``i``, and in combination of time slices ``j`` (see notes since there
+      are more than ``ntslice_use`` options for ``j``).
+
+  Notes
+  -----
+  The combination of time slices (last axis of `output_array`) is as follows.
+  In pseudocode where ``S[j]`` refers to the signal in time
+  slice ``ntslices[j]``:
+
+  - In all cases, the first ``ntslices`` elements are the median of the corresponding
+    time slice, i.e., ``output_array[:,j]`` is the median of ``S[j]``.
+
+  - The next ``ntslices`` elements are the medians of the difference frames, i.e.,
+    ``output_array[:,ntslices+j]`` is the median of the difference of slices
+    ``S[0]-S[j]``.
+
+  - If there are at least 2 slices, then the last element ``output_array[:,-1]``
+    is the median of the double difference
+    ``(D[-2]-D[-1]) - (D[0]-D[1])``. Otherwise it is zero.
+    (This is mainly used to measure curvature of the reference pixel ramp.)
+
+  """
 
   num_files = len(filelist)
-  ntslice_use = len(tslices)
-  output_array = numpy.zeros((num_files, 2*ntslice_use+1))
+  ntslices = len(tslices)
+  output_array = numpy.zeros((num_files, 2*ntslices+1))
 
   if len(yrange)<2:
     print ('Error in ref_array_block: yrange =', yrange)
@@ -347,23 +656,39 @@ def ref_array_block(filelist, formatpars, yrange, tslices, verbose):
 
   return(output_array)
 
-# Generate a 4D date cube containing information on a region of the detector
-#
-# filename = name of the source FITS file
-# formatpars = integer describing which type of format to use
-#     format 1: H4RG, all data in a single HDU, ramp slope positive (ex. DCL H4RG-18237 data)
-# xyrange = list [xmin,xmax,ymin,ymax] (first row/col are zero) -- EXcluding xmax and ymax!
-# tslices = list of time slices to use (first is *1*)
-# maskinfo = information on how the masking works (list format, if not enough elements goes to default)
-#   maskinfo[0] = range around median to accept (default: 0.1, must be within 10% of median)
-#   maskinfo[1] = boolean, mask assuming light exposure (default: True)
-#
-# verbose = True or False (use True only for de-bugging)
-#
-# Returns a 4D array of dimension number of files +1, number tslices, ymax-ymin, xmax-xmin
-#   the *last* "file" is the mask (0 or 1)
-#
 def pixel_data(filelist, formatpars, xyrange, tslices, maskinfo, verbose):
+  """
+  Generate a 4D date cube containing information on a region of the detector.
+
+  Parameters
+  ----------
+  filelist : list of str
+      A list of the input file names.
+  formatpars : int
+      Which input format type to use.
+  xyrange : list of int
+      The rectangular region to pull, in [xmin,xmax,ymin,ymax] format.
+      Python format, i.e., the first row and column are zero, and xmax and ymax are not included.
+  tslice : list of int
+      The time slices to use (first time slice is 1).
+  maskinfo : list or tuple
+      A list-like object with at least 2 elements, [``cut_offset``, ``do_mask``]. Here ``cut_offset``
+      is the range around median to accept (default: 0.1, must be within 10% of median); and
+      ``do_mask`` is a boolean on whether to do the masking.
+      If we don't have at least 2 elements, defaults to [0.1, True].
+  verbose : bool
+      Whether to print lots of information.
+
+  Returns
+  -------
+  output_array : np.array
+      A 4D array. The shape is (``num_files``+1, ``ntslices``, dy, dx),
+      where dy=ymax-ymin and dx=xmax-xmin are the sizes of the regions on the detector;
+      ``ntslices`` is the number of time slices requested (length of `tslice`); and ``num_files``
+      is the number of files (length of `filelist`). The last slice, ``output_array[-1,:,:,:]``
+      is the mask (good=True).
+
+  """
 
   # Masking parameters
   cut_offset = 0.1
@@ -372,8 +697,8 @@ def pixel_data(filelist, formatpars, xyrange, tslices, maskinfo, verbose):
   if len(maskinfo)>=2: do_mask = maskinfo[1]
 
   num_files = len(filelist)
-  ntslice_use = len(tslices)
-  output_array = numpy.zeros((num_files+1, ntslice_use, xyrange[3]-xyrange[2], xyrange[1]-xyrange[0]))
+  ntslices = len(tslices)
+  output_array = numpy.zeros((num_files+1, ntslices, xyrange[3]-xyrange[2], xyrange[1]-xyrange[0]))
 
   for ifile in range(num_files):
     output_array[ifile,:,:,:] = load_segment(filelist[ifile], formatpars, xyrange, tslices, verbose)
@@ -387,38 +712,60 @@ def pixel_data(filelist, formatpars, xyrange, tslices, maskinfo, verbose):
   else:
     goodmap = numpy.ones_like(mCDS)
   for f in range(num_files):
-    for t in range(ntslice_use):
+    for t in range(ntslices):
       goodmap *= numpy.where(output_array[f,t,:,:]>0,1,0)
   if verbose:
     print ('Median =', mCDS_med, 'cut_offset =', cut_offset)
     print (goodmap)
     print (goodmap.shape)
   # Copy map of good pixels into the output
-  for t in range(ntslice_use):
+  for t in range(ntslices):
     output_array[num_files,t,:,:] = goodmap
 
   return output_array
 
-# Routine to get nonlinearity curve
-# Inputs:
-#   filelist       <- list of 'light' files
-#   formatpars     <- format type for file
-#   timeslice      <- integer (does frames 1 .. tmax) or list [tref,t1,t2], uses t1 ... t2 with reset at tref
-#   ngrid          <- number of cells, list [ny,nx]
-#   Ib             <- shouldn't need this except for de-bugging (forces a specific quadratic fit)
-#   usemode        <- 'dev' (deviation from beta fit) or 'abs' (absolute -- zero of time is absolute)
-#   verbose        <- Boolean
-#
-# Output:
-#   signal, fit, derivative [, coefs]
-#   array of dimensions [tmax, ny, nx] containing reference corrected signal (in DN)
-#     This is median within a file, followed by the mean.
-#   The second and third outputs have the same shape as the first:
-#     2nd is a polynomial fit
-#     3rd is a corrected derivative (in DN/frame)
-#   The polynomial coefficients are reported as coefs (ascending order: t^0, then t^1 ...) in 'abs' mode,
-#     and as a data cube [order+1, ny, nx]
 def gen_nl_cube(filelist, formatpars, timeslice, ngrid, Ib, usemode, verbose):
+  """
+  Routine to get nonlinearity curve.
+
+  Parameters
+  ----------
+  filelist : list of str
+      A list of the input file names.
+  formatpars : int
+      Which input format type to use.
+  timeslice : int or list of int
+      Which samples to use. If a list, uses ``timeslice[1]`` through ``timeslice[2]``,
+      assuming reset at time
+      ``timeslice[0]``. If an integer, does time slices 1 ... `timeslice`,
+      assuming reset at slice 0.
+  ngrid : list or tuple of int
+      Number of cells on each axis; length 2, y first:``[ny,nx]`` or ``(ny,nx)``.
+  Ib : variable
+      Deprecated; can pass anything.
+  usemode : str
+      Either ``'dev'`` (deviation from beta fit) or ``'abs'`` (absolute -- zero of time is absolute).
+  verbose : bool
+      Whether to talk a lot.
+
+  Returns
+  -------
+  output_array : np.array
+      Reference corrected signal in DN; shape = (``nt``, ``ny``, ``nx``), where ``nt``
+      is the number of time slices requested.
+      This is the median within a file, and then we take the mean across files.
+  fit_array : np.array
+      The polynomial fit in DN; shape = (``nt``, ``ny``, ``nx``).
+      Would be equal to `output_array` if the fit is perfect.
+  deriv_array : np.array
+      The derivative of the polynomial fit in DN/frame; shape = (``nt``, ``ny``, ``nx``).
+  coefs_array : np.array, optional
+      The polynomial coefficients for the ramps; shape (``order``+1, ``ny``, ``nx``).
+      Order is ascending, i.e., constant term is ``coefs_array[0,:,:]``, then the linear
+      term is ``coefs_array[1,:,:]``, etc. Only returned if `usemode` is ``'abs'``.
+
+  """
+
   # Extract basic information
   nfiles = len(filelist)
   nx = ngrid[1]; ny = ngrid[0]
@@ -479,7 +826,6 @@ def gen_nl_cube(filelist, formatpars, timeslice, ngrid, Ib, usemode, verbose):
   for iy in range(ny):
     for ix in range(nx):
       p = numpy.poly1d(numpy.polyfit(numpy.asarray(range(tmin-tref,tmax+1-tref)), output_array[:,iy,ix], my_order))
-      # p = numpy.poly1d([-Ib[iy,ix],1,0]) # <-- force proportional to beta-model (if not commented; for debugging only)
       q=numpy.poly1d.deriv(p)
       fit_array[:,iy,ix] = p(range(tmin-tref,tmax+1-tref))
       deriv_array[:,iy,ix] = q(range(tmin-tref,tmax+1-tref))
@@ -489,18 +835,36 @@ def gen_nl_cube(filelist, formatpars, timeslice, ngrid, Ib, usemode, verbose):
   else:
     return output_array, fit_array, deriv_array, coefs_array
 
-# Routine to estimate the fractional gain error,
-# log( gain[full NL] / gain[est. quad.])
-# caused by using a beta-model for the nonlinearity curve instead of the full curve.
-#
-# Inputs are:
-#   fit_array = signal in DN for true curve (length tmax array, starting with frame #1)
-#   deriv_array = signal rate in DN/frame
-#   Ib = charge per frame times beta (unitless)
-#   tslices = time slices used for the gain (select 3 here)
-#   reset_frame = which frame was reset? (0 if 1st frame is 1 after reset)
-#
 def compute_gain_corr(fit_array, deriv_array, Ib, tslices, reset_frame):
+  """
+  Gets the correction to the gain from using the full model versus the beta model.
+
+  Parameters
+  ----------
+  fit_array : np.array of float
+      Signal in DN for true curve (length ``tmax`` array, starting with frame 1).
+  deriv_array : np.array of float
+      Signal rate in DN/frame (length ``tmax`` array, starting with frame 1).
+  Ib : float
+      The charge per frame times beta (unitless).
+  tslices : list of int
+      Length 3 list: the time slices used for the quadratic fit in determining beta.
+  reset_frame : int or float
+      Reset frame (ideally int, but float would be OK if you want to represent an
+      imperfect reset as we observe in Roman detectors).
+
+  Returns
+  -------
+  float
+      The ractional gain error, log( gain[full NL] / gain[est. quad.]),
+      caused by using a beta-model for the nonlinearity curve instead of the full curve.
+
+  See Also
+  --------
+  compute_gain_corr_many : Similar but for multiple superpixels at once.
+
+  """
+
   # unpack time information
   ta = tslices[0] - reset_frame
   tb = tslices[1] - reset_frame
@@ -526,10 +890,45 @@ def compute_gain_corr(fit_array, deriv_array, Ib, tslices, reset_frame):
   true_expepsilon = (fit_array[ind]-fit_array[inb]) / (-2*ta*deriv_array[ina]*(deriv_array[ind]-deriv_array[inb])
     + td*deriv_array[ind]**2 - tb*deriv_array[inb]**2)
   return numpy.log(true_expepsilon*deriv_array[0]) - Ib*(-4.*ta+3.*tb+3.*td)
-#
-# Same but for a whole grid of points (i.e. all nx x ny cells at a time).
-# also includes a mask to avoid error messages.
+
 def compute_gain_corr_many(fit_array, deriv_array, Ib, tslices, reset_frame, is_good):
+  """
+  Gets the correction to the gain from using the full model versus the beta model.
+
+  This version works for many superpixels.
+
+  Parameters
+  ----------
+  fit_array : np.array of float
+      Signal in DN for true curve. Shape (``tmax``, ``ny``, ``nx``),
+      where the first axis corresponds to the time stamp and the others are superpixel
+      indices. Time stamps start at frame 1.
+  deriv_array : np.array of float
+      Signal rate in DN/frame, same shape as `fit_array`.
+  Ib : np.array of float
+      The charge per frame times beta (unitless). This is a 2D array, shape (``ny``, ``nx``).
+  tslices : list of int
+      Length 3 list: the time slices used for the quadratic fit in determining beta.
+  reset_frame : int or float
+      Reset frame (ideally int, but float would be OK if you want to represent an
+      imperfect reset as we observe in Roman detectors).
+  is_good : np.array of int or bool
+      Mask array, shape (``ny``, ``nx``), True or 1 indicates good pixels,
+      False or 0 indicates bad.
+
+  Returns
+  -------
+  np.array of float
+      The ractional gain error, log( gain[full NL] / gain[est. quad.]),
+      caused by using a beta-model for the nonlinearity curve instead of the full curve.
+      This is 2D with all the superpixels, shape (``ny``, ``nx``).
+
+  See Also
+  --------
+  compute_gain_corr : Similar but for only one superpixel.
+
+  """
+
   out_array = numpy.zeros_like(fit_array[0,:,:])
   ny = numpy.shape(fit_array)[1]; nx = numpy.shape(fit_array)[2]
   for iy in range(ny):
@@ -538,18 +937,37 @@ def compute_gain_corr_many(fit_array, deriv_array, Ib, tslices, reset_frame, is_
         out_array[iy,ix] = compute_gain_corr(fit_array[:,iy,ix], deriv_array[:,iy,ix], Ib[iy,ix], tslices, reset_frame)
   return out_array
 
-# Routine to estimate the correction to the correlation
-#   g^2 C_{abab}(+/-1,0)/(It_{ab}) / (2 alpha (1-4 alpha) )
-# caused by using a beta-model for the nonlinearity curve instead of the full curve.
-#
-# Inputs are:
-#   fit_array = signal in DN for true curve (length tmax array, starting with frame #1)
-#   deriv_array = signal rate in DN/frame
-#   Ib = charge per frame times beta (unitless)
-#   tslices = time slices used for the x-corr (select 2 here)
-#   reset_frame = which frame was reset? (0 if 1st frame is 1 after reset)
-#
 def compute_xc_corr(fit_array, deriv_array, Ib, tslices, reset_frame):
+  """
+  Gets the correction to the adjacent-pixel correlation from using the full model versus the beta model.
+
+  Parameters
+  ----------
+  fit_array : np.array of float
+      Signal in DN for true curve (length ``tmax`` array, starting with frame 1).
+  deriv_array : np.array of float
+      Signal rate in DN/frame (length ``tmax`` array, starting with frame 1).
+  Ib : float
+      The charge per frame times beta (unitless).
+  tslices : list of int
+      Length 3 list: the time slices used for the quadratic fit in determining beta.
+  reset_frame : int or float
+      Reset frame (ideally int, but float would be OK if you want to represent an
+      imperfect reset as we observe in Roman detectors).
+
+  Returns
+  -------
+  float
+      The correction to the adjacent-pixel correlation,
+      (full correlation) / (beta model correlation)
+      caused by using a beta-model for the nonlinearity curve instead of the full curve.
+
+  See Also
+  --------
+  compute_xc_corr_many : Similar but for multiple superpixels at once.
+
+  """
+
   # unpack time information
   ta = tslices[0] - reset_frame
   tb = tslices[1] - reset_frame
@@ -561,10 +979,45 @@ def compute_xc_corr(fit_array, deriv_array, Ib, tslices, reset_frame):
   # f'(tb)^2 + ta/tab * (f'(tb)-f'(ta)) - (1 - 4 Ib tb)
   return( (deriv_array[inb]**2 - ta/(tb-ta)*(deriv_array[inb]-deriv_array[ina])**2) / deriv_array[0]**2
     - (1. - 4*Ib*tb) )
-#
-# Same but for a whole grid of points (i.e. all nx x ny cells at a time).
-# also includes a mask to avoid error messages.
+
 def compute_xc_corr_many(fit_array, deriv_array, Ib, tslices, reset_frame, is_good):
+  """
+  Gets the correction to the adjacent-pixel correlation from using the full model versus the beta model.
+
+  This version works for many superpixels.
+
+  Parameters
+  ----------
+  fit_array : np.array of float
+      Signal in DN for true curve. Shape (``tmax``, ``ny``, ``nx``),
+      where the first axis corresponds to the time stamp and the others are superpixel
+      indices. Time stamps start at frame 1.
+  deriv_array : np.array of float
+      Signal rate in DN/frame, same shape as `fit_array`.
+  Ib : np.array of float
+      The charge per frame times beta (unitless). This is a 2D array, shape (``ny``, ``nx``).
+  tslices : list of int
+      Length 3 list: the time slices used for the quadratic fit in determining beta.
+  reset_frame : int or float
+      Reset frame (ideally int, but float would be OK if you want to represent an
+      imperfect reset as we observe in Roman detectors).
+  is_good : np.array of int or bool
+      Mask array, shape (``ny``, ``nx``), True or 1 indicates good pixels,
+      False or 0 indicates bad.
+
+  Returns
+  -------
+  np.array of float
+      The ractional gain error, log( gain[full NL] / gain[est. quad.]),
+      caused by using a beta-model for the nonlinearity curve instead of the full curve.
+      This is 2D with all the superpixels, shape (``ny``, ``nx``).
+
+  See Also
+  --------
+  compute_xc_corr_many : Similar but for only one superpixel.
+  
+  """
+
   out_array = numpy.zeros_like(fit_array[0,:,:])
   ny = numpy.shape(fit_array)[1]; nx = numpy.shape(fit_array)[2]
   for iy in range(ny):
@@ -573,21 +1026,30 @@ def compute_xc_corr_many(fit_array, deriv_array, Ib, tslices, reset_frame, is_go
         out_array[iy,ix] = compute_xc_corr(fit_array[:,iy,ix], deriv_array[:,iy,ix], Ib[iy,ix], tslices, reset_frame)
   return out_array
 
-# Routine to get IPC-corrected gain
-# 
-# Inputs:
-#   graw      = uncorrected gain (e/DN)
-#   CH        = horizontal correlation (DN^2)
-#   CV        = vertical correlation (DN^2)
-#   signal    = signal in this ramp (DN)
-#
-# Output list:
-#   gain (alpha corr), e/DN
-#   alphaH
-#   alphaV
-#
-# returns [] if failed.
 def gain_alphacorr(graw, CH, CV, signal):
+  """
+  Routine to get IPC-corrected gain from properties of a difference image.
+
+  Parameters
+  ----------
+  graw : float
+      Uncorrected gain (e/DN)
+  CH : float
+      Horizontal correlation (DN^2)
+  CV : float
+      Vertical correlation (DN^2)
+  signal : float
+      Signal in this ramp (DN)
+
+  Returns
+  -------
+  list of float
+      If successful, returns a list of [gain, alphaH, alphaV]
+      (with gain alpha-corrected and in e/DN).
+      Returns an empty list if failed.
+
+  """
+
   g = graw
   for i in range(100):
     alphaH = CH*g/(2*signal)
@@ -615,15 +1077,45 @@ def gain_alphacorr(graw, CH, CV, signal):
 #
 # returns [] if failed
 def gain_alphabetacorr(graw, CH, CV, signal, frac_dslope, times):
+  """
+  Get IPC+NL-corrected gain.
 
-  # This is solving the following set of equations
-  # (see Hirata's brighter-fatter effect paper)
-  #
-  # graw = g * [ 1 + beta I (3tb+3td-4ta) ] / [ (1-4alpha)^2 + 2alphaH^2 + 2alphaV^2 ]
-  # CH = (2 I tad alphaH / g^2) [ 1 - 4alpha - 4 beta I td ]
-  # CV = (2 I tad alphaV / g^2) [ 1 - 4alpha - 4 beta I td ]
-  # signal = I tad [ 1 - beta I (ta+td) ] / g
-  # frac_dslope = - beta I (tc+td-ta-tb)
+  Parameters
+  ----------
+  graw : float
+      Uncorrected gain (e/DN)
+  CH : float
+      Horizontal correlation (DN^2)
+  CV : float
+      Vertical correlation (DN^2)
+  signal : float
+      Signal in this ramp (DN)
+  frac_dslope : float
+      Signal ratio for non-linearity, S_{cd}/S_{ab}-1 (unitless).
+  times : list of int
+      The time slices to use (length 4: [ta, tb, tc, td]).
+
+  Returns
+  -------
+  list of float
+      If successful, returns a list of [gain, alphaH, alphaV, beta, current]
+      (with gain corrected and in e/DN; beta in 1/e; and current in e/frame).
+      Returns an empty list if failed.
+
+  Notes
+  -----
+
+  This is solving the following set of equations
+  (see Hirata's brighter-fatter effect paper)::
+
+    # in pseudocode
+    graw = g * [ 1 + beta I (3tb+3td-4ta) ] / [ (1-4alpha)^2 + 2alphaH^2 + 2alphaV^2 ]
+    CH = (2 I tad alphaH / g^2) [ 1 - 4alpha - 4 beta I td ]
+    CV = (2 I tad alphaV / g^2) [ 1 - 4alpha - 4 beta I td ]
+    signal = I tad [ 1 - beta I (ta+td) ] / g
+    frac_dslope = - beta I (tc+td-ta-tb)
+
+  """
 
   # Initial guess
   g = graw
@@ -650,36 +1142,70 @@ def gain_alphabetacorr(graw, CH, CV, signal, frac_dslope, times):
 
   return [g, alphaH, alphaV, beta, I]
 
-# Basic characterization of a data cube
-#
-# region_cube = 4D array of the region of interest (order of indices: file, timeslice, y-ymin, x-xmin)
-# dark_cube = same, but for a suite of darks
-# tslices = list of time slices
-# lightref = reference pixel table for correcting light exposures (2D)
-#   size is num_files, 2*ntslice_use+1 (assumes we are taking the correct y-slice)
-# darkref = same as for lightref
-# ctrl_pars = control parameter list
-#   ctrl_pars.epsilon = cut fraction (default to 0.01)
-#   ctrl_pars.subtr_corr = mean subtraction for the IPC correlation? (default to True)
-#   ctrl_pars.noise_corr = noise subtraction for the IPC correlation? (default to True)
-#   ctrl_pars.reset_frame = reset frame (default to 0)
-#   ctrl_pars.subtr_href = reference pixel subtraction? (default to True)
-#   ctrl_pars.full_corr = which parameters to report (default to True = standard basic pars; False = correlation data instead)
-#   ctrl_pars.leadtrailSub = lead-trail subtraction? (default to False)
-#   ctrl_pars.g_ptile = percentile for inter-quantile range (default to 75)
-# verbose = True or False  (recommend True only for de-bugging)
-#
-# Returns a list of basic calibration parameters.
-# if ctrl_pars.full_corr is True
-#   [number of good pixels, gain_raw, gain_acorr, gain_abcorr, aH, aV, beta, I, 0., tCH, tCV]
-# if False:
-#   [number of good pixels, median, variance, tCH, tCV, tCD]
-# Returns the null list [] if failed.
-#
-# Includes a test so this won't crash if tslices[1]>=tslices[-1] but returns meaningful x-correlation C_{abab}
-# (everything else is nonsense in this case)
-#
 def basic(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verbose):
+  """
+  Basic characterization of a data cube.
+
+  Parameters
+  ----------
+  region_cube : np.array
+      4D array of the region of interest. shape: (num_files+1, nt, dy, dx),
+      where num_files is the number of files, nt is the number of time slices, and
+      (dy, dx) is the shape of the region on the SCA used. The last slice, ``region_cube[-1,:,:,:]``,
+      is the mask (1 for good, 0 for bad).
+  dark_cube : np.array
+      Like `region_cube`, but for the darks. It is optional whether there is a separate mask
+      (it isn't used, so it is OK if the first axis has length num_files or num_files+1).
+  tslices : list of int
+      List of the time slice numbers; length ``nt``.
+  lightref : np.array
+      Reference pixel table for correcting light exposures. shape = (num_files, 2*nt+1);
+      the way the time axis is managed is described in :func:`ref_corr`.
+  darkref : np.array
+      Similar to `lightref`, but for the dark exposures.
+  ctrl_pars : class
+      Contains the control parameters as attributes (see Notes).
+  verbose : bool
+      Whether to print lots of information.
+
+  Returns
+  -------
+  list
+      The basic calibration parameters. The return information depends on whether ``ctrl_pars.full_corr``
+      is True or False::
+
+        # True (default):
+        [number of good pixels, gain_raw, gain_acorr, gain_abcorr, aH, aV, beta, I, 0., tCH, tCV]
+        # False:
+        [number of good pixels, median, variance, tCH, tCV, tCD]
+
+      Returns the null list [] if failed.
+
+  Notes
+  -----
+  The `ctrl_pars` class contains the following attributes:
+
+  - ``epsilon`` : float
+    Fraction of data points to cut for computing correlations (default 0.01)
+  - ``subtr_corr`` : bool
+    Do mean subtraction for the IPC correlation? (default to True)
+  - ``noise_corr`` : bool
+    Do noise subtraction for the IPC correlation? (default to True)
+  - ``reset_frame`` : int
+    Reset frame (default to 0)
+  - ``subtr_href`` : bool
+    Horizontal reference pixel subtraction? (default to True)
+  - ``full_corr`` : bool
+    Which parameters to report? (default to True = standard basic pars; False = correlation data instead)
+  - ``leadtrailSub`` : bool
+    Perform lead-trail subtraction? (default to False)
+  - ``g_ptile`` : float
+    Percentile for inter-quantile range (default to 75)
+
+  This includes a test so this won't crash if tslices[1]>=tslices[-1] but returns meaningful
+  cross-correlation C_{abab} (everything else is nonsense in this case).
+
+  """
 
   # Settings:
   newMeanSubMethod = True     # use False only for test/debug
@@ -920,11 +1446,51 @@ def basic(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verbose
 
   return [numpy.sum(this_mask), gain_raw, gain_acorr, gain_abcorr, aH, aV, beta, I, 0., tCH, tCV]
 
-# Under construction correlation functions for charge diffusion measurements
-# many parts drawn from basic, might want option to do the usual 3x3 vs 5x5 but
-# this could be done in principle just with the usual basic function?
-# There's probably a better way of writing this...?!
 def corr_5x5(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verbose):
+  """
+  Extracts 5x5 correlation matrix from light and dark data.
+
+  Parameters
+  ----------
+  region_cube : np.array
+      4D array of the region of interest. shape: (num_files+1, nt, dy, dx),
+      where num_files is the number of files, nt is the number of time slices, and
+      (dy, dx) is the shape of the region on the SCA used. The last slice, ``region_cube[-1,:,:,:]``,
+      is the mask (1 for good, 0 for bad).
+  dark_cube : np.array
+      Like `region_cube`, but for the darks. It is optional whether there is a separate mask
+      (it isn't used, so it is OK if the first axis has length num_files or num_files+1).
+  tslices : list of int
+      List of the time slice numbers; length ``nt``.
+  lightref : np.array
+      Reference pixel table for correcting light exposures. shape = (num_files, 2*nt+1);
+      the way the time axis is managed is described in :func:`ref_corr`.
+  darkref : np.array
+      Similar to `lightref`, but for the dark exposures.
+  ctrl_pars : class
+      A class containing the control parameters as attributes. These are optional (but
+      recommended); if specified, they follow the same format as in :func:`basic`.
+  verbose : bool
+      Whether to print lots of information.
+
+  Returns
+  -------
+  list
+      The return list has 5 entries. In what follows, "a", "b", and "d" correspond
+      to time slices ``tslices[0]``, ``tslices[1]``, and ``tslices[-1]``:
+
+      - Number of good pixels
+
+      - Accumulated signal S_{bd} (in DN; median of mean method).
+
+      - Estimated robust variance (from inter-quantile range) of S_{ab} (DN^2).
+
+      - Estimated robust variance (from inter-quantile range) of S_{ad} (DN^2).
+
+      - Correlation function out to 2 pixels of S_{ad}, i.e., C_{adad}, shape = (5,5)
+        cenetered on (0,0).
+
+  """
 
   # Settings:
   newMeanSubMethod = True     # use False only for test/debug
@@ -1090,22 +1656,54 @@ def corr_5x5(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verb
   # Return the correlations
   return [numpy.sum(this_mask), med21, var1, var2, tC_all_5x5]
 
-# Routine to obtain statistical properties of a region of the detector across many time slices
-#
-# Inputs:
-# lightfiles = list of light files
-# darkfiles = list of dark files
-# formatpars = format parameters
-# box = list [xmin, xmax, ymin, ymax]
-# tslices = list [tmin, tmax, deltas ...] (Python format -- xmax, ymax, tmax not included)
-#   if no deltas (tslices length 2) then compute everything; if deltas specified, then only compute
-#   correlations at the specified deltas (e.g. [1,3] for delta t = 1 or 3)
-# sensitivity_spread_cut = for good pixels (typically 0.1)
-# ctrl_pars = parameters for basic
-#
-# Each data[ti,tj,:] contains:
-#   [number of good pixels, median, variance, tCH, tCV, tCD]
 def corrstats(lightfiles, darkfiles, formatpars, box, tslices, sensitivity_spread_cut, ctrl_pars):
+  """
+  Routine to obtain statistical properties of a region of the detector across many time slices.
+
+  Parameters
+  ----------
+  lightfiles : list
+      The list of "light" (flat field) files.
+  darkfiles : list
+      The list of dark files.
+  formatpars : int
+      The file format.
+  box : list of int
+      The box boundaries in the form [xmin, xmax, ymin, ymax], with the usual
+      convention that pixels are included if xmin<=x<xmax and ymin<=y<ymax.
+  tslices : list if int
+      The list of time slices to use, with length at least 2. The first two entries
+      are ``tmin`` and ``tmax`` (with tmin<=t<tmax). If the length is exactly 2, then
+      all time slice combinations are computed (see Returns). Otherwise, the additional
+      entries are "deltas". For example, [4,10,1,3] means that computations are done for
+      4<=ti<tj<10, but only with combinations that have tj-ti equal to 1 or 3.
+  sensitivity_spread_cut : float
+      What percentage response from median flat to cut for identifying good pixels (typically 0.1).
+  ctrl_pars : class
+      A class containing the control parameters as attributes. These are optional (but
+      recommended); if specified, they follow the same format as in :func:`basic`.
+
+  Returns
+  -------
+  data : np.array
+      Array of return information, shape = (nt, nt, 6), where nt is the number of time slices
+      (so data for time slice pair ti,tj is in ``data[ti-tmin,tj-tmin,:]``). The fields on the last
+      axis are:
+ 
+      - Number of good pixels
+
+      - Accumulated signal S_{ab} (in DN; median of mean method).
+
+      - Variance of S_{ab} (DN^2).
+
+      - Correlation function for horizontal pixels, C_{abab}(1,0) (DN^2).
+
+      - Correlation function for vertical pixels, C_{abab}(0,1) (DN^2).
+
+      - Correlation function for diagonal pixels, C_{abab}(+/-1,+/-1), averaged
+        over the two diagonal directions (DN^2).
+
+  """
 
   # make copy of ctrl_pars, but force 5th element to be False
   ctrl_pars2 = copy.copy(ctrl_pars)
@@ -1140,26 +1738,85 @@ def corrstats(lightfiles, darkfiles, formatpars, box, tslices, sensitivity_sprea
 
   return data
 
-# Routine to characterize of a region of the detector across many time slices
-#
-# Inputs:
-# lightfiles = list of light files
-# darkfiles = list of dark files
-# formatpars = format parameters
-# box = list [xmin, xmax, ymin, ymax]
-# tslices = list [tmin, tmax, dt1, dt2] (Python format -- xmax, ymax, tmax not included)
-#   correlations at the specified dt's are used (e.g. [1,5])
-# sensitivity_spread_cut = for good pixels (typically 0.1)
-# ctrl_pars = parameters for basic
-# addInfo = additional information (sometimes needed)
-# corrstats_data = data for this slice from corrstats (if given; if not given, computes it)
-# 
-# return value is [isgood (1/0), g, aH, aV, beta, I, aD, da (residual)]
-#
 def polychar(lightfiles, darkfiles, formatpars, box, tslices, sensitivity_spread_cut, ctrl_pars, addInfo, corrstats_data=None):
+  """
+  Routine to characterize of a region of the detector across many time slices.
+
+  Parameters
+  ----------
+  lightfiles : list
+      The list of "light" (flat field) files.
+  darkfiles : list
+      The list of dark files.
+  formatpars : int
+      The file format.
+  box : list of int
+      The box boundaries in the form [xmin, xmax, ymin, ymax], with the usual
+      convention that pixels are included if xmin<=x<xmax and ymin<=y<ymax.
+  tslices : list if int
+      The list of time slices to use, with length at least 2. The first two entries
+      are ``tmin`` and ``tmax`` (with tmin<=t<tmax). If the length is exactly 2, then
+      all time slice combinations are computed (see Returns). Otherwise, the additional
+      entries are "deltas". For example, [4,10,1,3] means that computations are done for
+      4<=ti<tj<10, but only with combinations that have tj-ti equal to 1 or 3.
+  sensitivity_spread_cut : float
+      What percentage response from median flat to cut for identifying good pixels (typically 0.1).
+  ctrl_pars : class
+      A class containing the control parameters as attributes. These are optional (but
+      recommended); see the Notes.
+  addInfo : list
+      Some additional information needed for IPNL corrections to the inferred gain and IPC data.
+      The length may be 0 (null, no corrections), 2, or 3. If there is a correction, then the entries
+      are:
+
+      - ``addInfo[0]`` : str
+        Either 'bfe' or 'nlipc' (which form of IPNL to assume dominant).
+
+      - ``addInfo[1]`` : np.array
+        BFE kernel, shape (2s+1, 2s+1), centered at 0, units in inverse electrons.
+
+      - ``addInfo[2]`` : np.array, optional
+        1D array of polynomial coefficients, needed if ``ctrl_pars.use_allorder`` is True.
+        This is in DN-based units, starting with the quadratic coefficient (unit: DN^-1).
+
+  corrstats_data : np.array, optional
+      If given, saved data from :func:`corrstats` (saves time if alraedy computed).
+
+  Returns
+  -------
+  list
+     The list entries are [isgood (1 = good, 0 = bad), gain (e/DN), alpha_H (IPC), alpha_V (IPC),
+     beta (1/e), Intensity (e/frame), alpha_D (IPC), change in alpha from previous iteration
+     (residual)]. Returns the empty list [] in the event of a failure.
+
+  Notes
+  -----
+  The `ctrl_pars` class contains the following attributes.
+  They follow the same format as in :func:`basic`, except that ``use_allorder`` is added:
+
+  - ``epsilon`` : float
+    Fraction of data points to cut for computing correlations (default 0.01)
+  - ``subtr_corr`` : bool
+    Do mean subtraction for the IPC correlation? (default to True)
+  - ``noise_corr`` : bool
+    Do noise subtraction for the IPC correlation? (default to True)
+  - ``reset_frame`` : int
+    Reset frame (default to 0)
+  - ``subtr_href`` : bool
+    Horizontal reference pixel subtraction? (default to True)
+  - ``full_corr`` : bool
+    Which parameters to report? (default to True = standard basic pars; False = correlation data instead)
+  - ``leadtrailSub`` : bool
+    Perform lead-trail subtraction? (default to False)
+  - ``g_ptile`` : float
+    Percentile for inter-quantile range (default to 75)
+  - ``use_allorder`` : bool
+    Whether to use the full polynomial expansion for the non-linearity correction? (default to False)
+
+  """
 
   # Check whether we have non-linearity information
-  if ctrl_pars.use_allorder:
+  if hasattr(ctrl_pars,use_allorder) and ctrl_pars.use_allorder:
     if len(addInfo)<3:
       print ('Error: polychar: not enough fields in addInfo')
       return []
@@ -1203,7 +1860,7 @@ def polychar(lightfiles, darkfiles, formatpars, box, tslices, sensitivity_spread
   slopemed, icpt = numpy.linalg.lstsq(numpy.vstack([numpy.array(range(npts)) + tslices[0]-ctrl_pars.reset_frame,
                    numpy.ones(npts)]).T, diff_frames, rcond=-1)[0]
   # If using 'allorder', let's subtract out the higher-order terms:
-  if ctrl_pars.use_allorder:
+  if hasattr(ctrl_pars,use_allorder) and ctrl_pars.use_allorder:
     xr = numpy.array(range(npts)) + tslices[0]-ctrl_pars.reset_frame
     i=100; err=10;
     etarget = 1e-9*numpy.abs(icpt)
@@ -1308,23 +1965,57 @@ def polychar(lightfiles, darkfiles, formatpars, box, tslices, sensitivity_spread
 
   return [1, g, alphaH, alphaV, beta, I, alphaD, da]
 
-# Routines to compute the BFE coefficients
-#
-# Inputs:
-# region_cube = 4D array of the region of interest (order of indices: file, timeslice, y-ymin, x-xmin)
-# tslices = list of time slices
-# basicinfo = output from basic (incl. gains, IPC, NL)
-# ctrl_pars_bfe = parameters to control BFE determination
-#   ctrl_pars_bfe.epsilon = cut fraction (default to 0.01)
-#   ctrl_pars_bfe.treset = reset frame (default to 0)
-#   ctrl_pars_bfe.BSub = baseline subtraction? (default to True)
-#   ctrl_pars_bfe.vis = has visible? (default to False)
-#   ctrl_pars_bfe.Phi = omega*p2/(1+omega) kernel (only used if ctrl_pars_bfe.vis is true)
-# verbose = True or False (recommend True only for debugging)
-#
-# output is a fsBFE x fsBFE (default: 5x5) BFE kernel in inverse electrons
-#
 def bfe(region_cube, tslices, basicinfo, ctrl_pars_bfe, verbose):
+  """
+  Routines to compute the BFE coefficients.
+ 
+  Parameters
+  ----------
+  region_cube : np.array
+      4D array of the region of interest. shape: (num_files+1, nt, dy, dx),
+      where num_files is the number of files, nt is the number of time slices, and
+      (dy, dx) is the shape of the region on the SCA used. The last slice, ``region_cube[-1,:,:,:]``,
+      is the mask (1 for good, 0 for bad).
+  tslices : list of int
+      A list of at least 4 time slices. The first two and last two ("a", "b", "c", and "d") are
+      used for the BFE determination.
+  basicinfo : list
+      Output from :func:`basic` (inclides gains, IPC, and non-linearity).
+  ctrl_pars_bfe : class
+      Parameters to control BFE determination; see Notes.
+  verbose : bool
+      Whether to talk a lot.
+ 
+  Returns
+  -------
+  np.array
+      The BFE kernel, shape (2s+1, 2s+1), Antilogus coefficients in inverse electrons.
+
+  Notes
+  -----
+  The (optional) attributes in `ctrl_pars_bfe` are::
+
+    - ``epsilon`` : float
+      Fraction of data to cut in computing correlation coefficients (default to 0.01).
+
+    - ``treset`` : int or float
+      Reset frame (default to 0). Fractional values are possible.
+
+    - ``BSub`` : bool
+      Perform baseline subtraction? (default to True)
+
+    - ``vis`` : bool
+      Does this have visible light information (for quantum yield)? (default to False)
+
+    - ``Phi`` : np.array
+      2D quantum yield + charge diffusion kernel (only used if `ctrl_pars_bfe`.vis is True).
+      This is omega/(1+omega)*p2, where 1+omega is the quantum yield (omega is the probability
+      of getting 2 charges from 1 photon) and p2[s+dy,s+dx] is the pairwise probability that two charges
+      generated at the same point land in the pixel (dx,dy). Here the kernel has shape (2s+1, 2s+1),
+      centered at zero (so it is symmetric).
+
+  """
+
   N = 21 # <-- size for ftsolve
 
   # Extract parameters from basicinfo
@@ -1492,16 +2183,44 @@ def bfe(region_cube, tslices, basicinfo, ctrl_pars_bfe, verbose):
        BFEK[sBFE-1,sBFE] += 4*aV*beta
      return BFEK[sBFE-sBFE_out:sBFE+sBFE_out+1, sBFE-sBFE_out:sBFE+sBFE_out+1]
 
-# Hot pixel identification
-# Returns a tuple of hot pixels in the array that meet the following criteria:
-# (*) apparent brightness in time slices up through tslices[-1] is assessed
-# (*) in range from pars[0] .. pars[1] in last slice
-# (*) repeatable to within a top-to-bottom error of pars[2] as a fraction of the
-#       maximum signal (e.g. 0.1 for 10% repeatability)
-# (*) isolation: if pars[3]>0, rejects pixels with neighbors that are at least pars[3] times
-#       as bright as this pixel itself (e.g. 0.1 for 10% isolation)
-#
 def hotpix(darkfiles, formatpars, tslices, pars, verbose):
+  """
+  Selects hot pixels.
+
+  Parameters
+  ----------
+  darkfiles : list of str
+      A list of the filenames of the dark exposures.
+  formatpars : int
+      The format code.
+  tslices : list of int
+      The time slices to read (the first slice is 1).
+  pars : np.array or array-like
+      Parameters controlling the hot pixel selection. These should be
+      ``[Smin, Smax, stability, f_isolation]`` (see Notes for detailed meaning).
+  verbose : bool
+      Whether to print lots of information.
+
+  Returns
+  -------
+  row, col : np.array of int
+      The row and column values of the selected hot pixels. The two arrays have the same
+      length; the ``i``th hot pixel is at ``[row[i],col[i]]``.
+
+  Notes
+  -----
+  The hot pixels in the array must meet the following criteria:
+
+  - The apparent brightness in time slices up through tslices[-1] is assessed.
+    Pixels are required to have a dark signal in DN between ``Smin`` and ``Smax``.
+
+  - Repeatable to within a top-to-bottom error of ``stability`` as a fraction of the
+    maximum signal (e.g. 0.1 for 10% repeatability).
+
+  - Isolation: if ``f_isolation``>0, rejects pixels with neighbors that are at least this many
+    times as bright as this pixel itself (e.g. 0.1 for 10% isolation).
+
+  """
 
   # Build array for the dark cube
   ndarks = len(darkfiles)
@@ -1549,24 +2268,37 @@ def hotpix(darkfiles, formatpars, tslices, pars, verbose):
 
   return numpy.where(this_hot>0)
 
-# Return IPC data from a list of hot pixels.
-# y, x = lists of hot pixel coordinates to use (probably selected from hotpix)
-# darkfiles = list of dark files to use
-# formatpars = format code for dark files
-# tslices = list of time slices to report
-# pars = parameters to control data selection
-#        right now, if not empty:
-#        pars[0] = numpy array map of non-linearity * gain values (units: DN^-1) (skip if not numpy.ndarray)
-#        pars[1] = reference non-linearity to median stack of initial image? (T/F)
-# verbose = T/F
-#
-# Returns data cube with three indices.
-# data[jpix,jt,jpos] = signal (in DN) at position jpos (relative to hot pixel)
-#                      at time slice jt
-#                      of hot pixel jpix
-#
-# positions are: jpos=0 (center), 1 (right), 2 (up), 3 (left), 4 (down), 5-8 (diag, quadrants I-IV), 9 (bkgnd 5x5-3x3)
 def hotpix_ipc(y, x, darkfiles, formatpars, tslices, pars, verbose):
+  """
+  Return IPC data from a list of hot pixels.
+
+  Parameters
+  ----------
+  y, x : np.array of int
+      Tables of hot pixel coordinates to use (probably selected from :func:`hotpix`).
+  darkfiles : list of str
+      List of dark files to use.
+  formatpars : int
+      Format code for dark files.
+  tslices : list of int
+      List of time slices to report.
+  pars : list, [np.array, bool]
+      Parameters to control data selection. If not empty, `pars`[0] is a map of the
+      non-linearity times gain (units: 1/DN) and `pars`[1] is a boolean for whether
+      the non-linearity should be referenced to a median stack of initial image.
+  verbose : bool
+      Whether to talk a lot.
+
+  Returns
+  ------- 
+  np.array
+      Data cube with the signal in DN from the hot pixels. The shape is (npix, nt, 10), where npix is the
+      number of hot pixels (length of `y` and `x`); and nt is the number of time stamps
+      (length of `tslices`). The last index indicates the position: 0 = that pixel; 1 = right; 2 = up;
+      3 = left; 4 = downl; 5 = upper-right; 6 = upper-left; 7 = lower-left; 8 = lower-right;
+      9 = background (from the next 5x5-3x3=13 pixels out).
+
+  """
 
   # Build array for the dark cube
   ndarks = len(darkfiles)
@@ -1633,19 +2365,39 @@ def hotpix_ipc(y, x, darkfiles, formatpars, tslices, pars, verbose):
 
   return data
 
-# sliding median function
-#
-# takes in vectors x and y (length N) and percentile p.
-# returns slope m such that p% of the data are below the line y = m*x.
-#
-# works by bisection in the 'guess' range mrange, with niter=64 iterations as default.
-# default mrange is [-1,1] (appropriate for IPC uses)
-#
-# The pivot is not used but is here for forward compatibility; right now it assumes
-# that the pivot point of the distribution is at x>0 (hence ordering in the bisection).
-# In a future release if we need to change this the functionality is there.
-#
 def slidemed_percentile(x,y,p,mrange=[-1,1],niter=64,pivot='pos'):
+  """
+  Sliding median function.
+
+  Takes in points specified by `x` and `y` arrays, and percentile `p`,
+  and returns slope m such that p% of the data are below the line y = m*x.
+
+  (If all values in `x` are positive, this is simply a percentile of `y`/`x`.
+  But this version is not biased when the noise causes a few values to fluctuate
+  negative.)
+
+  Parameters
+  ----------
+  x, y : np.array of float
+      Vectors of the same length.
+  p : float
+      Desired percentile.
+  mrange : list, optional
+      Slope range to search, length 2 ([mmin, mmax]).
+  niter : int, optional
+      Number of bisections to perform.
+  pivot : str, optional
+      The pivot is not used but is here for forward compatibility; right now it assumes
+      that the pivot point of the distribution is at x>0 (hence ordering in the bisection).
+      In a future release if we need to change this the functionality is there.
+
+  Returns
+  -------
+  float
+      The slope of the line meeting that percentile criterion.
+
+  """
+
   m1 = mrange[0]
   m2 = mrange[1]
 
@@ -1657,9 +2409,25 @@ def slidemed_percentile(x,y,p,mrange=[-1,1],niter=64,pivot='pos'):
       m2=m
   return m
 
-# Generates min and max range for a color bar
-# based on inter-quartile range
 def get_vmin_vmax(mydata, qext):
+  """
+  Generates min and max range for a color bar based on inter-quartile range.
+
+  Parameters
+  ----------
+  mydata : np.array
+      The data to consider
+  qext : float
+      Number of interquartile ranges to extend (should be >=0, with 0
+      corresponding to 25th through 75th percentile).
+
+  Returns
+  -------
+  float, float
+      The minimum and maximum of the scale.
+
+  """
+
   Q1 = numpy.nanpercentile(mydata,25)
   Q2 = numpy.nanpercentile(mydata,75)
   return Q1-(Q2-Q1)*qext, Q2+(Q2-Q1)*qext
