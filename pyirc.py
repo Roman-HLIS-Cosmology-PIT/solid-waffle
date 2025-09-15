@@ -339,7 +339,7 @@ class IndexDictionary:
     self.p = p
     self.N += p
 
-swi = IndexDictionary(0) # basic solid-waffle index list
+swi_init = IndexDictionary(0) # basic solid-waffle index list
 
 def pyIRC_percentile(this_array, mask, perc, disc=True):
   """
@@ -724,7 +724,7 @@ def pixel_data(filelist, formatpars, xyrange, tslices, maskinfo, verbose):
 
   return output_array
 
-def gen_nl_cube(filelist, formatpars, timeslice, ngrid, Ib, usemode, verbose):
+def gen_nl_cube(filelist, formatpars, timeslice, ngrid, Ib, usemode, swi, verbose):
   """
   Routine to get nonlinearity curve.
 
@@ -745,6 +745,8 @@ def gen_nl_cube(filelist, formatpars, timeslice, ngrid, Ib, usemode, verbose):
       Deprecated; can pass anything.
   usemode : str
       Either ``'dev'`` (deviation from beta fit) or ``'abs'`` (absolute -- zero of time is absolute).
+  swi : class
+      Column table.
   verbose : bool
       Whether to talk a lot.
 
@@ -1738,7 +1740,7 @@ def corrstats(lightfiles, darkfiles, formatpars, box, tslices, sensitivity_sprea
 
   return data
 
-def polychar(lightfiles, darkfiles, formatpars, box, tslices, sensitivity_spread_cut, ctrl_pars, addInfo, corrstats_data=None):
+def polychar(lightfiles, darkfiles, formatpars, box, tslices, sensitivity_spread_cut, ctrl_pars, addInfo, swi, corrstats_data=None):
   """
   Routine to characterize of a region of the detector across many time slices.
 
@@ -1779,6 +1781,8 @@ def polychar(lightfiles, darkfiles, formatpars, box, tslices, sensitivity_spread
         1D array of polynomial coefficients, needed if ``ctrl_pars.use_allorder`` is True.
         This is in DN-based units, starting with the quadratic coefficient (unit: DN^-1).
 
+  swi : class
+      Column table.
   corrstats_data : np.array, optional
       If given, saved data from :func:`corrstats` (saves time if alraedy computed).
 
@@ -1965,7 +1969,7 @@ def polychar(lightfiles, darkfiles, formatpars, box, tslices, sensitivity_spread
 
   return [1, g, alphaH, alphaV, beta, I, alphaD, da]
 
-def bfe(region_cube, tslices, basicinfo, ctrl_pars_bfe, verbose):
+def bfe(region_cube, tslices, basicinfo, ctrl_pars_bfe, swi, verbose):
   """
   Routines to compute the BFE coefficients.
  
@@ -1983,6 +1987,8 @@ def bfe(region_cube, tslices, basicinfo, ctrl_pars_bfe, verbose):
       Output from :func:`basic` (inclides gains, IPC, and non-linearity).
   ctrl_pars_bfe : class
       Parameters to control BFE determination; see Notes.
+  swi : class
+      Column table.
   verbose : bool
       Whether to talk a lot.
  
