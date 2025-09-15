@@ -1,44 +1,128 @@
+"""
+Fourier-domain flat correlation prediction code for solid-waffle.
+"""
+
 import numpy as np
 from numpy.fft import fft2,ifft2
 import warnings
 import pdb
 
 def center(arr):
-    # Transforms kernel so that it looks as expected to the eye:
-    # Returns version of kernel with (0,0) in center, y=-1 down, x=-1 left, etc.
-    # Centered arrays should *NOT* be used for calculations! For display only :)
+    """
+    Transforms kernel so that it looks as expected to the eye.
+
+    Parameters
+    ----------
+    arr : np.array
+        2D array kernel, square with odd side length.
+
+    Returns
+    -------
+    np.array
+        Returns version of kernel with (0,0) in center, y=-1 down, x=-1 left, etc.
+        Centered arrays should *NOT* be used for calculations! For display only.
+
+    See Also
+    --------
+    decenter : Inverse function.
+
+    """
+
     size = (len(arr)+1)//2
     return np.roll(np.roll(arr,-size,axis=0),-size,axis=1)
 
 def decenter(arr):
-    # Transforms kernel from human-readable to numpy-readable 
-    # Only decentered arrays should be used for calculations
+    """
+    Transforms kernel from human-readable to numpy-readable.
+
+    Only decentered arrays should be used for calculations.
+
+    Parameters
+    ----------
+    arr : np.array
+        2D array kernel, square with odd side length, human-readable.
+
+    Returns
+    -------
+    np.array
+        Decentered array.
+
+    See Also
+    --------
+    center : Inverse function.
+
+    """
+
     size = (len(arr)+1)//2
     return np.roll(np.roll(arr,size,axis=0),size,axis=1)
 
 def flip(arr):
-    # transforms decentered a_i,j -> decentered a_-i,-j
+    """
+    Transforms decentered a_i,j -> decentered a_-i,-j.
+
+    The function is its own inverse.
+
+    Parameters
+    ----------
+    arr : np.array
+        2D array kernel, square with odd side length, human-readable.
+
+    Returns
+    -------
+    np.array
+        Flipped array.
+
+    """
+
     arrc = center(arr)
     arrc_flipped = np.flip(arrc.flatten(),axis=0).reshape(arrc.shape)
     return decenter(arrc_flipped)
 
 def pad_to_N(arr,N):
-    # pads array out to size NxN (if arr is smaller than this)
-    # input assumed to be centered
+    """
+    Zero-pads array out to size NxN (if arr is smaller than this).
+
+    Parameters
+    ----------
+    arr : np.array
+        2D input array, odd size, square, assumed to be centered.
+    N : int
+        Size to pad `arr` to. Must be odd. Does nothing if `arr` is already this big.
+
+    Returns
+    -------
+    np.array
+        The padded array.
+
+    """
+
     if not arr.shape[0]>N:
         pad_size = (N-arr.shape[0])//2
         return np.pad(arr,pad_size,mode='constant')
     else:
         return arr
 
-# p2kernel inputs:
-#   cov: covariance matrix (list or np array, length 3: xx, xy, yy)
-#   np2: kernel radius to generate
-#   N_integ: number of integration steps
-#
-# outputs: 2*np2+1 x 2*np2+1 array of p2
-#   (so that p2_output[np2+j, np2+i] is p2(i,j))
 def p2kernel(cov, np2, N_integ=256):
+  """
+  Constructs a pairwise correlation kernel from a 2x2 covariance matrix.
+
+  Parameters
+  ----------
+  cov : list or np.array of float
+      Length 3; [Cxx, Cxy, Cyy].
+  np2: int
+      Kernel radius to generate.
+  N_integ : int, optional
+      Number of integration steps.
+
+  Returns
+  -------
+  p2_output : np.array of float
+      The p2 kernel, of shape (2*`np2`+1, 2*`np2`+1)
+      so that ``p2_output[np2+j, np2+i]`` is the probability that if one charge
+      generated in a flat field lands in (0,0), the other lands in (i,j).
+
+  """
 
   use_extrule = True # turn off only for de-bugging
 
@@ -84,10 +168,26 @@ def p2kernel(cov, np2, N_integ=256):
   p2_output /= 2*np.pi*np.sqrt(detC)
   return(p2_output)
 
-# given omegabar*p2 kernel -> get [omega, cxx, cxy, cyy, change in last step, number of iterations]
-# omegabar = omega/(1+omega)
-# cmin = minimum semi-minor axis of the covariance
 def op2_to_pars(op2, cmin=.01):
+  """
+  Fits a quantum yield model to a Phi-kernel.
+
+  Parameters
+  ----------
+  op2 : np.array
+      The Phi-kernel, omega/(1+omega)*p2 (where omega is the 2-charge probability and p2 is the
+      pairwise charge diffusion probability kernel). This is the combination that can be extracted from
+      a correlation function.
+  cmin : float, optional
+      Minimum semi-minor axis of the covariance. (Prevents regularity problems.)
+
+  Returns
+  -------
+  list
+     Entries are [omega, cxx, cxy, cyy, change in last step, number of iterations].
+
+  """
+
   cf = 1.
   np2 = np.shape(op2)[0]//2
   omegabar = np.sum(op2)
@@ -142,8 +242,11 @@ def op2_to_pars(op2, cmin=.01):
   omega = omegabar/(1-omegabar)
   return([omega, cxx, cxy, cyy, eps, j_iter])
 
-# test functions for p2kernel
 def p2kernel_test():
+  """
+  Test function for p2kernel.
+  """
+
   for i in range(4):
     s = .4/2**i
     cov = [s**2, .5*s**2, s**2]
@@ -155,18 +258,38 @@ def p2kernel_test():
     print(op2_to_pars(.025*p2kernel(cov,2)+.025*p2kernel([s**2,0,s**2],2)))
 
 def solve_corr(bfek,N,I,g,betas,sigma_a,tslices,avals,avals_nl=[0,0,0],outsize=2):
-    # INPUT: 
-    # bfek     <- compound kernel [K^2 a+KK*](assumed to be centered)
-    # N        <- detector size (assumed odd for now)
-    # I        <- current
-    # g        <- gain (assuming no higher order fitting for now)
-    # betas    <- array of classical non-linearity coefficients [beta_2...beta_n]
-    # sigma_a  <- sum of the BFE kernel
-    # tslices  <- list of time slices (ta, tb, tc, td)  
-    # avals    <- list of alpha values for linear IPC kernel (aV, aH, aD)
-    # avals_nl <- list of alpha values for NL-IPC kernel (aV_nl, aH_nl, aD_nl)
-    # outsize  <- "radius" of output (equiv. to sBFE_out in main code)
-    # OUTPUT: C_abcd
+    """
+    Predicts the unequal-time correlation function C_{abcd}(Delta i, Delta j).
+
+    Parameters
+    ----------
+    bfek : np.array
+        Compound kernel [K^2 a+KK*] (assumed to be centered).
+    N : int
+        Size to use for boudary conditions (must be odd, larger is more accurate).
+    I : float
+        Current (elementary charges per pixel per frame).
+    g : float
+        Gain in e/DN.
+    betas : np.array of float
+        Array of classical non-linearity coefficients [beta_2...beta_n].
+    sigma_a : float
+        Sum of the BFE kernel, in e^-1.
+    tslices : list of int
+        List of time slices [ta, tb, tc, td].
+    avals : list or tuple of float
+        The alpha values for the linear IPC kernel [aV, aH, aD]. Dimensionless.
+    avals_nl : list or tuple of float, optional
+        The alpha values for NL-IPC kernel [aV_nl, aH_nl, aD_nl]. Units 1/e..
+    outsize : int, optional
+        The "radius" of output (so the BFE kernel has size (2*outsize+1, 2*outsize+1).
+
+    Returns
+    -------
+    np.array
+        An array of size (N, N) describing C_{abcd}(Delta i, Delta j) in "decentered" mode.
+
+    """
     
     ta, tb, tc, td = tslices
     aV, aH, aD = avals
@@ -205,7 +328,7 @@ def solve_corr(bfek,N,I,g,betas,sigma_a,tslices,avals,avals_nl=[0,0,0],outsize=2
     ksq_p = flip(ksq)
     knl_sq_p = flip(knl_sq)
 
-   # Calculate Cov(qsq(t),qsq(t')) (see eqn 38)
+    # Calculate Cov(qsq(t),qsq(t')) (see eqn 38)
     qqs = []
 
     for ts in [(ta,tc),(ta,td),(tb,tc),(tb,td)]:
@@ -222,7 +345,7 @@ def solve_corr(bfek,N,I,g,betas,sigma_a,tslices,avals,avals_nl=[0,0,0],outsize=2
 
         qqs.append(qq)
     
-# Plug into correlation function (see eqn 51)
+    # Plug into correlation function (see eqn 51)
     csq_abcd =(1/g**2
            *(eval_cnl(betas,I,ta)*eval_cnl(betas,I,tc)*(ksq+knl_sq*I*ta)*(ksq_p+knl_sq_p*I*tc)*qqs[0] 
            - eval_cnl(betas,I,ta)*eval_cnl(betas,I,td)*(ksq+knl_sq*I*ta)*(ksq_p+knl_sq_p*I*td)*qqs[1] 
@@ -233,14 +356,69 @@ def solve_corr(bfek,N,I,g,betas,sigma_a,tslices,avals,avals_nl=[0,0,0],outsize=2
     return center(np.real(ifft2(csq_abcd)))[cent][:,cent]
 
 def eval_cnl(betas,I,t):
+    """
+    Evaluates the derivative of a non-linearity polynomial.
+
+    Parameters
+    ----------
+    betas : np.array
+        The coefficients, in order starting from 2nd order (beta_2), then 3rd order (beta_3), etc.
+    I : float
+        The current in electrons per pixel per frame.
+    t : float
+        The time in frames since reset.
+
+    Returns
+    -------
+    float
+        The derivative g*dS/dQ (where g is the gain in e/DN; S is the signal in DN; and Q is the
+        charge in e).
+
+    """
+
     nu = np.arange(2,len(betas)+2)
     return 1-np.sum(nu*betas*(I*t)**(nu-1))
 
 
-# same as solve_corr *except* that we have tslice [ta,tb,tc,td,tn],
-# where tn >= 1 is the number of similar steps to use -- i.e., we have
-# (C_{ta,tb,tc,td} + C_{ta+1,tb+1,tc+1,td+1} + ... + C_{ta+tn-1,tb+tn-1,tc+tn-1,td+tn-1} )/tn
 def solve_corr_many(bfek,N,I,g,betas,sigma_a,tslices,avals,avals_nl=[0,0,0],outsize=2):
+   """
+   Predicts a sequence of similar unequal-time correlation functions.
+
+   Parameters
+   ----------
+   bfek : np.array
+       Compound kernel [K^2 a+KK*] (assumed to be centered).
+   N : int
+       Size to use for boudary conditions (must be odd, larger is more accurate).
+   I : float
+       Current (elementary charges per pixel per frame).
+   g : float
+       Gain in e/DN.
+   betas : np.array of float
+       Array of classical non-linearity coefficients [beta_2...beta_n].
+   sigma_a : float
+       Sum of the BFE kernel, in e^-1.
+   tslices : list of int
+       List of time slices [ta, tb, tc, td, tn]. Should have tn>=1.
+   avals : list or tuple of float
+       The alpha values for the linear IPC kernel [aV, aH, aD]. Dimensionless.
+   avals_nl : list or tuple of float, optional
+       The alpha values for NL-IPC kernel [aV_nl, aH_nl, aD_nl]. Units 1/e..
+   outsize : int, optional
+       The "radius" of output (so the BFE kernel has size (2*outsize+1, 2*outsize+1).
+
+   Returns
+   -------
+   np.array
+       The mean correlation function, sum_{k=0}^{tn-1} C_{ta+k,tb+k,tc+k,td+k} / tn,
+       as a shape (N, N) array, decentered.
+
+   See Also
+   --------
+   solve_corr : equivalent version with tn=1.
+
+   """
+
    this_t = tslices[:-1]
    tn = tslices[-1]
    cf = solve_corr(bfek,N,I,g,betas,sigma_a,this_t,avals,avals_nl,outsize)
@@ -254,6 +432,47 @@ def solve_corr_many(bfek,N,I,g,betas,sigma_a,tslices,avals,avals_nl=[0,0,0],outs
 # behavior of solve_corr if omega = 0. Otherwise, it takes in p2 and omega != 0.
 # input p2 is *centered*
 def solve_corr_vis(bfek,N,I,g,betas,sigma_a,tslices,avals,avals_nl=[0,0,0],outsize=2,omega=0,p2=0):
+    """
+    Predicts the unequal-time correlation function C_{abcd}(Delta i, Delta j) for visible light.
+
+    Parameters
+    ----------
+    bfek : np.array
+        Compound kernel [K^2 a+KK*] (assumed to be centered).
+    N : int
+        Size to use for boudary conditions (must be odd, larger is more accurate).
+    I : float
+        Current (elementary charges per pixel per frame).
+    g : float
+        Gain in e/DN.
+    betas : np.array of float
+        Array of classical non-linearity coefficients [beta_2...beta_n].
+    sigma_a : float
+        Sum of the BFE kernel, in e^-1.
+    tslices : list of int
+        List of time slices [ta, tb, tc, td].
+    avals : list or tuple of float
+        The alpha values for the linear IPC kernel [aV, aH, aD]. Dimensionless.
+    avals_nl : list or tuple of float, optional
+        The alpha values for NL-IPC kernel [aV_nl, aH_nl, aD_nl]. Units 1/e..
+    outsize : int, optional
+        The "radius" of output (so the BFE kernel has size (2*outsize+1, 2*outsize+1).
+    omega : float, optional
+        The probability of getting 2 charges.
+    p2 : np.array, optional
+        The pairwise separation probability for 2 charges generated at the same point in a flat field.
+
+    Returns
+    -------
+    np.array
+        An array of size (N, N) describing C_{abcd}(Delta i, Delta j) in "decentered" mode.
+
+    See Also
+    --------
+    solve_corr : Similar but for IR flats.
+
+    """
+
     if omega == 0:
         return solve_corr(bfek,N,I,g,betas,sigma_a,tslices,avals,avals_nl,outsize)
     else:
@@ -325,6 +544,48 @@ def solve_corr_vis(bfek,N,I,g,betas,sigma_a,tslices,avals,avals_nl=[0,0,0],outsi
         
 # Like solve_corr_many but designed for handling charge diffusion
 def solve_corr_vis_many(bfek,N,I,g,betas,sigma_a,tslices,avals,avals_nl=[0,0,0],outsize=2,omega=0,p2=0):
+   """
+   Predicts a sequence of similar unequal-time correlation functions, for visible light.
+
+   Parameters
+   ----------
+   bfek : np.array
+       Compound kernel [K^2 a+KK*] (assumed to be centered).
+   N : int
+       Size to use for boudary conditions (must be odd, larger is more accurate).
+   I : float
+       Current (elementary charges per pixel per frame).
+   g : float
+       Gain in e/DN.
+   betas : np.array of float
+       Array of classical non-linearity coefficients [beta_2...beta_n].
+   sigma_a : float
+       Sum of the BFE kernel, in e^-1.
+   tslices : list of int
+       List of time slices [ta, tb, tc, td, tn]. Should have tn>=1.
+   avals : list or tuple of float
+       The alpha values for the linear IPC kernel [aV, aH, aD]. Dimensionless.
+   avals_nl : list or tuple of float, optional
+       The alpha values for NL-IPC kernel [aV_nl, aH_nl, aD_nl]. Units 1/e..
+   outsize : int, optional
+       The "radius" of output (so the BFE kernel has size (2*outsize+1, 2*outsize+1).
+   omega : float, optional
+       The probability of getting 2 charges.
+   p2 : np.array, optional
+       The pairwise separation probability for 2 charges generated at the same point in a flat field.
+
+   Returns
+   -------
+   np.array
+       The mean correlation function, sum_{k=0}^{tn-1} C_{ta+k,tb+k,tc+k,td+k} / tn,
+       as a shape (N, N) array, decentered.
+
+   See Also
+   --------
+   solve_corr_vis : equivalent version with tn=1.
+
+   """
+
    this_t = tslices[:-1]
    tn = tslices[-1]
    cf = solve_corr_vis(bfek,N,I,g,betas,sigma_a,this_t,avals,avals_nl,outsize,omega,p2)
@@ -335,8 +596,10 @@ def solve_corr_vis_many(bfek,N,I,g,betas,sigma_a,tslices,avals,avals_nl=[0,0,0],
    return(cf)
    
 if __name__=="__main__":
-   
-   # Test against configuration-space corrfn generated from known inputs/simulated flats
+   """
+   Test against configuration-space corrfn generated from known inputs/simulated flats.
+   """
+
    N = 21
    I = 1487
    g = 2.06
