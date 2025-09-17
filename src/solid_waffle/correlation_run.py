@@ -23,7 +23,7 @@ import sys
 import time
 import re
 import numpy
-import pyirc
+from . import pyirc
 
 import matplotlib
 matplotlib.use('Agg')
@@ -34,7 +34,7 @@ class EmptyClass:
   """Blank, can add attributes later."""
   pass
 
-class Config(cfg):
+class Config():
   """
   Extracts configuration data from a multiline string.
 
@@ -42,8 +42,8 @@ class Config(cfg):
 
   Parameters
   ----------
-  cfg : str
-      The configuration (as a string).
+  cfg : str or list
+      The configuration (as a single string or list of strings).
   visible_run : bool, optional
       Is this configured to run visible light correlations?
   verbose : bool, optional
@@ -196,7 +196,7 @@ class Config(cfg):
 
   """
 
-  def __init__(self, visible_run = False, verbose = False):
+  def __init__(self, cfg, visible_run = False, verbose = False):
 
     self.visible_run = visible_run
 
@@ -220,7 +220,7 @@ class Config(cfg):
     self.hotpix_logtspace = False
     self.hotpix_slidemed = False
 
-    self.swi = pyirc.swi_init # initialize column table; will add more
+    self.swi = pyirc.IndexDictionary(0) # initialize column table; will add more
 
     # order parameters
     self.s_bfe = 2 # order of BFE parameters
@@ -262,6 +262,8 @@ class Config(cfg):
     self.narrowfig = False
 
     # Read in information
+    if isinstance(cfg, list):
+      cfg = ''.join(cfg) # convert to string
     content = cfg.splitlines()
     is_in_light = is_in_dark = False
     if self.visible_run:
@@ -269,6 +271,7 @@ class Config(cfg):
     self.maskX = [] # list of regions to mask
     self.maskY = []
     for line in content:
+
       # Cancellations
       m = re.search(r'^[A-Z]+\:', line)
       if m: is_in_light = is_in_dark = False
@@ -295,9 +298,9 @@ class Config(cfg):
       if m: self.outstem = m.group(1)
       # Search for input files
       m = re.search(r'^LIGHT\:', line)
-      if m: self.is_in_light = True
+      if m: is_in_light = True
       m = re.search(r'^DARK\:', line)
-      if m: self.is_in_dark = True
+      if m: is_in_dark = True
       if self.visible_run:
         m = re.search(r'^VISLIGHT\:', line)
         if m: is_in_vislight = True
@@ -424,36 +427,36 @@ class Config(cfg):
 
       # Control figures
       m = re.search(r'^NARROWFIG', line)
-        if m: self.narrowfig = True
+      if m: self.narrowfig = True
 
-      # set up array size parameters
-      self.swi.addbfe(self.s_bfe)
-      self.swi.addhnl(self.p_order)
-      print ('Number of output field per superpixel =', self.swi.N)
+    # set up array size parameters
+    self.swi.addbfe(self.s_bfe)
+    self.swi.addhnl(self.p_order)
+    print ('Number of output field per superpixel =', self.swi.N)
 
-      # Check number of slices available
-      NTMAX = 16384
-      for f in lightfiles+darkfiles:
-        nt = pyirc.get_num_slices(formatpars, f)
-        if nt<NTMAX: NTMAX=nt
-      self.NTMAX = NTMAX
+    # Check number of slices available
+    NTMAX = 16384
+    for f in self.lightfiles+self.darkfiles:
+      nt = pyirc.get_num_slices(self.formatpars, f)
+      if nt<NTMAX: NTMAX=nt
+    self.NTMAX = NTMAX
 
-      # Copy basicpar parameters to bfebar
-      self.bfepar.use_allorder = self.basicpar.use_allorder
-
-    # Checks
-    if len(lightfiles)!=len(darkfiles) or len(lightfiles)<2:
-        raise ValueError('Failed: {:d} light files and {:d} dark files'.format(len(lightfiles), len(darkfiles)))
+    # Copy basicpar parameters to bfebar
+    self.bfepar.use_allorder = self.basicpar.use_allorder
 
     if verbose:
-      print ('Output will be directed to {:s}*'.format(outstem))
-      print ('Light files:', lightfiles)
-      print ('Dark files:', darkfiles)
+      print ('Output will be directed to {:s}*'.format(self.outstem))
+      print ('Light files:', self.lightfiles)
+      print ('Dark files:', self.darkfiles)
       if self.visible_run:
-        print ('Visible light files:', vislightfiles)
-        print ('"Visible" dark files:', visdarkfiles)
-      print ('Time slices:', tslices, 'max=',NTMAX)
-      print ('Mask regions:', maskX, maskY)
+        print ('Visible light files:', self.vislightfiles)
+        print ('"Visible" dark files:', self.visdarkfiles)
+      print ('Time slices:', self.tslices, 'max=',self.NTMAX)
+      print ('Mask regions:', self.maskX, self.maskY)
+
+    # Checks
+    if len(self.lightfiles)!=len(self.darkfiles) or len(self.lightfiles)<2:
+        raise ValueError('Failed: {:d} light files and {:d} dark files'.format(len(self.lightfiles), len(self.darkfiles)))
 
     # Additional parameters Size of a block
     self.N = pyirc.get_nside(self.formatpars)
@@ -464,8 +467,8 @@ class Config(cfg):
     self.npix = self.dx*self.dy
 
     # Initializations
-    self.full_info = numpy.zeros((ny,nx,self.swi.N))
-    self.is_good = numpy.zeros((ny,nx))
+    self.full_info = numpy.zeros((self.ny,self.nx,self.swi.N))
+    self.is_good = numpy.zeros((self.ny,self.nx))
 
   def fit_parameters(self, verbose=False):
     """
@@ -1645,21 +1648,21 @@ class Config(cfg):
     S.set_title(r'$C_{xx}$')
     S.set_xlabel('Super pixel X/{:d}'.format(self.dx))
     S.set_ylabel('Super pixel Y/{:d}'.format(self.dy))
-    im = S.imshow(self.vis_out_data[:,:,self.vis_col["Cxx"]]], cmap=use_cmap, origin='lower')
+    im = S.imshow(self.vis_out_data[:,:,self.vis_col["Cxx"]], cmap=use_cmap, origin='lower')
     F.colorbar(im, orientation='vertical')
     
     S = F.add_subplot(2,3,5)
     S.set_title(r'$C_{xy}$')
     S.set_xlabel('Super pixel X/{:d}'.format(self.dx))
     #S.set_ylabel('Super pixel Y/{:d}'.format(self.dy))
-    im = S.imshow(self.vis_out_data[:,:,self.vis_col["Cxy"]]], cmap=use_cmap, origin='lower')
+    im = S.imshow(self.vis_out_data[:,:,self.vis_col["Cxy"]], cmap=use_cmap, origin='lower')
     F.colorbar(im, orientation='vertical')
     
     S = F.add_subplot(2,3,6)
     S.set_title(r'$C_{yy}$')
     S.set_xlabel('Super pixel X/{:d}'.format(self.dx))
     #S.set_ylabel('Super pixel Y/{:d}'.format(self.dy))
-    im = S.imshow(self.vis_out_data[:,:,self.vis_col["Cyy"]]], cmap=use_cmap, origin='lower')
+    im = S.imshow(self.vis_out_data[:,:,self.vis_col["Cyy"]], cmap=use_cmap, origin='lower')
     F.colorbar(im, orientation='vertical')
     
     # F.set_tight_layout(True)
