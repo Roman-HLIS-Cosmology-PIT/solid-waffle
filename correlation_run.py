@@ -421,7 +421,7 @@ class Config(cfg):
       # now coefficients for the info table note that in 'abs' mode, the full_info[:,:,0] grid is not actually used, it
       #   is just there for consistency of the format I moved this up here since we want to have these coefficients before the main program runs
       nlcubeX, nlfitX, nlderX, pcoefX = pyirc.gen_nl_cube(self.lightfiles, self.formatpars, [self.basicpar.reset_frame, self.nlfit_ts, self.nlfit_te], [self.ny, self.nx],
-        self.full_info[:,:,0], 'abs', False)
+        self.full_info[:,:,0], 'abs', self.swi, False)
       # fill in
       for iy in range(self.ny):
         for ix in range(self.nx):
@@ -460,18 +460,18 @@ class Config(cfg):
             corrstats_data = pyirc.corrstats(self.lightfiles, self.darkfiles, self.formatpars, boxpar,
                          tpar_polychar+[1], self.sensitivity_spread_cut, self.basicpar)
             for iCycle in range(self.ncycle):
-              bfeCoefs = pyirc.bfe(region_cube, self.tslices, thisinfo, self.bfepar, False)
+              bfeCoefs = pyirc.bfe(region_cube, self.tslices, thisinfo, self.bfepar, self.swi, False)
               if numpy.isnan(bfeCoefs).any():
                 bfeCoefs = numpy.zeros((2*self.swi.s+1,2*self.swi.s+1))
                 self.is_good[iy,ix] = 0
               Cdata = pyirc.polychar(self.lightfiles, self.darkfiles, self.formatpars, boxpar,
                  tpar_polychar, self.sensitivity_spread_cut, self.basicpar,
-                 [self.ipnltype, bfeCoefs, thisinfo[self.swi.beta]], corrstats_data = corrstats_data)
+                 [self.ipnltype, bfeCoefs, thisinfo[self.swi.beta]], self.swi, corrstats_data = corrstats_data)
               info[self.swi.ind1:self.swi.ind2] = numpy.asarray(Cdata[self.swi.indp1:self.swi.indp2])
               thisinfo = info.copy()
               if self.basicpar.use_allorder:
                 thisinfo[self.swi.beta] = self.full_info[iy,ix,self.swi.Nbb+1:self.swi.Nbb+self.swi.p]
-          bfeCoefs = pyirc.bfe(region_cube, self.tslices, thisinfo, self.bfepar, False)
+          bfeCoefs = pyirc.bfe(region_cube, self.tslices, thisinfo, self.bfepar, self.swi, False)
           if numpy.isnan(bfeCoefs).any():
             bfeCoefs = numpy.zeros((2*self.swi.s+1,2*self.swi.s+1))
             self.is_good[iy,ix] = 0
@@ -528,7 +528,7 @@ class Config(cfg):
     # Non-linearity cube
     ntSub = self.tslices[-1]
     nlcube, self.nlfit, self.nlder = pyirc.gen_nl_cube(self.lightfiles, self.formatpars, ntSub, [self.ny,self.nx],
-      self.full_info[:,:,self.swi.beta]*full_info[:,:,self.swi.I], 'dev', False)
+      self.full_info[:,:,self.swi.beta]*full_info[:,:,self.swi.I], 'dev', self.swi, False)
     if write_to_file:
       thisOut = open(self.outstem+'_nl.txt', 'w')
       for iy in range(ny):
