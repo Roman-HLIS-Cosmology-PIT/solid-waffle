@@ -13,7 +13,7 @@ import fitsio
 import copy
 import warnings
 from fitsio import FITS,FITSHDR
-from ftsolve import center,decenter,solve_corr,solve_corr_many,solve_corr_vis,solve_corr_vis_many,pad_to_N
+from .ftsolve import center,decenter,solve_corr,solve_corr_many,solve_corr_vis,solve_corr_vis_many,pad_to_N
 from scipy.signal import correlate2d,fftconvolve
 
 # <== TESTING PARAMETERS ONLY ==>
@@ -318,6 +318,7 @@ class IndexDictionary:
     self.Nbb += (2*s+1)*(2*s+1)
     self.N += (2*s+1)*(2*s+1)
     if hasattr(self, "p"):
+        print(self.p)
         raise ValueError("Should add BFE columns first, then non-linearity.")
 
   def addhnl(self, p):
@@ -338,8 +339,6 @@ class IndexDictionary:
 
     self.p = p
     self.N += p
-
-swi_init = IndexDictionary(0) # basic solid-waffle index list
 
 def pyIRC_percentile(this_array, mask, perc, disc=True):
   """
