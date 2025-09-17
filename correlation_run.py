@@ -12,6 +12,8 @@ Functions
 ---------
 run_ir_all
   Runs the IR characterization.
+run_vis_all
+  Runs the visible characterization.
 
 """
 
@@ -42,11 +44,15 @@ class Config(cfg):
   ----------
   cfg : str
       The configuration (as a string).
+  visible_run : bool, optional
+      Is this configured to run visible light correlations?
   verbose : bool, optional
       Whether to specify lots of information when reading the configuration.
 
   Attributes
   ----------
+  visible_run : bool
+      Is this configured to run visible light correlations?
   outstem : str
       The stem for output files.
   use_cmap : str
@@ -150,6 +156,18 @@ class Config(cfg):
   grid_alphaCorr, grid_alphaCorrErr, grid_alphaHot, grid_alphaHotErr : np.array
       The correlation- and hot pixel-based IPC in each of the 16 hexadecants of the detector array,
       and their uncertainties.
+  ts_vis, te_vis, tchar1_vis, tchar2_vis : int
+      The time stamps for visible characterization.
+  has_visbfe : bool
+      Visible BFE enabled?
+  tslices_visbfe : list of int
+      Time slices for visible BFE analysis.
+  copy_ir_bfe : bool
+      Assume IR BFE applies to visible? (May improve S/N.)
+  vis_out_data : np.array
+      The visible characterization data, shape = (`ny`, `nx`, 56)
+  vis_col : dict
+      Column mapping for the visible characterization.
 
   Methods
   -------
@@ -171,16 +189,24 @@ class Config(cfg):
     Hot pixel analysis.
   hotpix_plots
     Makes the hot pixel plots.
+  compute_vis_quantities
+    Computations for the visible light characterization.
+  vis_plots
+    Make plots for the visible light characterization.
 
   """
 
-  def __init__(self, verbose = False):
+  def __init__(self, visible_run = False, verbose = False):
+
+    self.visible_run = visible_run
 
     self.outstem = 'default_output'
     self.use_cmap = 'gnuplot'
 
     self.mydet = ''
     self.lightfiles = self.darkfiles = []
+    if self.visible_run:
+      self.vislightfiles = self.visdarkfiles = []
     self.formatpars = 1
     self.nx = self.ny = 32
     self.tslices = [3,11,13,21]
@@ -213,6 +239,8 @@ class Config(cfg):
     basicpar.g_ptile = 75.
     basicpar.fullnl = False
     basicpar.use_allorder = False
+    if self.visible_run:
+      basicpar.vis_med_correct = False
     self.basicpar = basicpar
 
     # Parameters for BFE
@@ -221,7 +249,14 @@ class Config(cfg):
     bfepar.treset = basicpar.reset_frame
     bfepar.blsub = True
     bfepar.fullnl = False
+    if self.visible_run:
+      bfepar.vis = True
+      self.copy_ir_bfe = False
     self.bfepar = bfepar
+
+    # Separate parameters for visible BFE?
+    if self.visible_run:
+      has_visbfe = False
 
     # Plotting parameters
     self.narrowfig = False
@@ -229,6 +264,8 @@ class Config(cfg):
     # Read in information
     content = cfg.splitlines()
     is_in_light = is_in_dark = False
+    if self.visible_run:
+      is_in_vislight = is_in_visdark = False
     self.maskX = [] # list of regions to mask
     self.maskY = []
     for line in content:
@@ -243,6 +280,13 @@ class Config(cfg):
       if is_in_dark:
         m = re.search(r'^\s*(\S.*)$', line)
         if m: self.darkfiles += [m.group(1)]
+      if self.visible_run:
+        if is_in_vislight:
+          m = re.search(r'^\s*(\S.*)$', line)
+          if m: self.vislightfiles += [m.group(1)]
+        if is_in_visdark:
+          m = re.search(r'^\s*(\S.*)$', line)
+          if m: self.visdarkfiles += [m.group(1)]
 
       # -- Keywords go below here --
 
@@ -254,6 +298,12 @@ class Config(cfg):
       if m: self.is_in_light = True
       m = re.search(r'^DARK\:', line)
       if m: self.is_in_dark = True
+      if self.visible_run:
+        m = re.search(r'^VISLIGHT\:', line)
+        if m: is_in_vislight = True
+        m = re.search(r'^VISDARK\:', line)
+        if m: is_in_visdark = True
+
       # Format
       m = re.search(r'^FORMAT:\s*(\d+)', line)
       if m: self.formatpars = int(m.group(1))
@@ -278,6 +328,27 @@ class Config(cfg):
            else:
              print ('Error: insufficient arguments: ' + line + '\n')
              exit()
+
+      if self.visible_run:
+        # Visible time stamp range
+        m = re.search(r'^VISTIME:\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)', line)
+        if m:
+          self.ts_vis = int(m.group(1))
+          self.te_vis = int(m.group(2))
+          self.tchar1_vis = int(m.group(3))
+          self.tchar2_vis = int(m.group(4))
+        #
+        m = re.search(r'^VISMEDCORR', line)
+        if m: self.basicpar.vis_med_correct = True
+        #
+        # Visible BFE
+        m = re.search(r'^VISBFETIME:\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)', line)
+        if m:
+          self.tslices_visbfe = [ int(m.group(x)) for x in range(1,5)]
+          self.has_visbfe = True
+
+        m = re.search(r'^COPYIRBFE', line)
+        if m: self.copy_ir_bfe = True
 
       # Time slices
       m = re.search(r'^TIME:\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)', line)
@@ -378,6 +449,9 @@ class Config(cfg):
       print ('Output will be directed to {:s}*'.format(outstem))
       print ('Light files:', lightfiles)
       print ('Dark files:', darkfiles)
+      if self.visible_run:
+        print ('Visible light files:', vislightfiles)
+        print ('"Visible" dark files:', visdarkfiles)
       print ('Time slices:', tslices, 'max=',NTMAX)
       print ('Mask regions:', maskX, maskY)
 
@@ -1235,6 +1309,363 @@ class Config(cfg):
     F.savefig(self.outstem+'_hotipc.pdf')
     plt.close(F)
 
+  def compute_vis_quantities(self, ir_output=None, verbose=False):
+    """
+    Computations for the visible light characterization.
+
+    Parameters
+    ----------
+    ir_output : str, optional
+        The data from the IR output characterization as a string; if not specified,
+        tries to load from the file.
+    verbose : bool, optional
+        Whether to talk a lot.
+
+    Returns
+    -------
+    None
+
+    """
+
+    # reference pixel subtraction flag
+    self.basicpar.subtr_href = self.fullref
+    
+    # more allocations
+    my_dim = self.swi.N
+    self.full_info = numpy.zeros((self.ny,self.nx,my_dim))
+    self.is_good = numpy.zeros((self.ny,self.nx))
+    
+    if ir_output is None:
+      info_from_ir = numpy.loadtxt(self.outstem+'_summary.txt')
+    else:
+      info_from_ir = ir_output
+    for j in range(my_dim):
+      self.full_info[:,:,j] = info_from_ir[:,j+2].reshape((self.ny,self.nx))
+    self.is_good = numpy.where(self.full_info[:,:,self.swi.g]>1e-49, 1, 0)
+
+    if verbose:
+      print('Number of good regions =', numpy.sum(self.is_good))
+      print('Lower-left corner ->', self.full_info[0,0,:])
+    
+    if p_order==0:
+      raise ValueError('Error: did not include polynomial order')
+    
+    # Get Ie
+    Ie = numpy.zeros((self.ny,self.nx))
+    Ie_alt = numpy.zeros((self.ny,self.nx))
+    Ie_alt2 = numpy.zeros((self.ny,self.nx))
+    
+    if verbose: print('computing Ie using', self.ts_vis, self.te_vis)
+    nlcubeX, nlfitX, nlderX, pcoefX = pyirc.gen_nl_cube(
+      self.vislightfiles, self.formatpars, [self.basicpar.reset_frame, self.ts_vis, self.te_vis], [self.ny,self.nx],
+      self.full_info[:,:,0], 'abs', self.swi, False)
+    for iy in range(self.ny):
+      for ix in range(self.nx):
+        if pcoefX[1,iy,ix]!=0:
+          t = numpy.linspace(self.ts_vis-self.basicpar.reset_frame, self.te_vis-self.basicpar.reset_frame, self.te_vis-self.ts_vis+1)
+          Signal = numpy.zeros((self.te_vis-self.ts_vis+1))
+          for ae in range(self.swi.p+1): Signal += pcoefX[ae,iy,ix]*t**ae
+          # iterative NL correction
+          LinSignal = numpy.copy(Signal)
+          for k in range(32):
+            LS2 = numpy.copy(LinSignal)
+            LinSignal = numpy.copy(Signal)
+            LS2 += (LinSignal[-1]-LinSignal[0])/(self.te_vis-self.ts_vis) * (self.ts_vis-self.basicpar.reset_frame)
+            for o in range(2,self.swi.p+1): LinSignal -= self.full_info[iy,ix,self.swi.Nbb+o-1]*LS2**o
+          Ie[iy,ix] = pcoefX[1,iy,ix] * self.full_info[iy,ix,self.swi.g]
+          Ie_alt[iy,ix] = (LinSignal[-1]-LinSignal[0])/(self.te_vis-self.ts_vis) * self.full_info[iy,ix,self.swi.g]
+          Sab = Signal[-1]-Signal[0]
+          Ie_alt2[iy,ix] = self.full_info[iy,ix,self.swi.g]*Sab/(self.te_vis-self.ts_vis)
+          beta_in_e = -self.full_info[iy,ix,self.swi.Nbb+1:self.swi.Nbb+self.swi.p]/self.full_info[iy,ix,self.swi.g]**numpy.linspace(1,self.swi.p-1,num=self.swi.p-1) # in e , -
+          for k in range(32):
+            btcorr = 0
+            for j in range(2,self.swi.p+1): btcorr += beta_in_e[j-2]*Ie_alt2[iy,ix]**(j-1)*(t[-1]**j-t[0]**j)
+            Ie_alt2[iy,ix] = self.full_info[iy,ix,self.swi.g]*Sab/(self.te_vis-self.ts_vis-btcorr)
+        else:
+          self.is_good[iy,ix] = 0 # error
+    
+    # we use the alt2 method
+    Ie[:,:] = Ie_alt2
+    
+    # get vis:IR Ie ratio information
+    vis_ir_ratio = Ie/self.full_info[:,:,self.swi.I]
+    vis_ir_ratio_good = vis_ir_ratio[self.is_good>.5]
+    if verbose:
+      print('VIS:IR ratio information: ', numpy.shape(vis_ir_ratio_good))
+      print('min, max =', numpy.amin(vis_ir_ratio_good), numpy.amax(vis_ir_ratio_good))
+      print('percentiles (5th,50th,95th)', numpy.percentile(vis_ir_ratio_good, 5), numpy.percentile(vis_ir_ratio_good, 50),
+        numpy.percentile(vis_ir_ratio_good, 95))
+      print('')
+    
+    # Allocate space for visible information
+    vis_bfek = numpy.zeros((self.ny,self.nx,5,5))
+    vis_Phi = numpy.zeros((self.ny,self.nx,5,5))
+    # omega and charge diffusion covariance
+    QYomega = numpy.zeros((self.ny,self.nx))
+    cdCov = numpy.zeros((self.ny,self.nx,3))
+    cdNiter = numpy.zeros((self.ny,self.nx))
+    
+    # Get correlation functions in each block
+    nvis = self.te_vis - self.ts_vis - self.tchar2_vis + 1
+    if verbose:
+      print ('Visible flat correlation functions, progress of calculation:')
+      sys.stdout.write('|')
+      for iy in range(self.ny): sys.stdout.write(' ')
+      print ('| <- 100%')
+      sys.stdout.write('|')
+    for iy in range(self.ny):
+      if verbose:
+        sys.stdout.write('*'); sys.stdout.flush()
+      if self.fullref:
+        tslices0 = numpy.asarray([self.ts_vis, self.ts_vis+self.tchar1_vis, self.ts_vis+self.tchar2_vis])
+        lightref_array = []
+        darkref_array = []
+        for k in range(nvis):
+         tslicesk = (tslices0+k).tolist()
+         lightref_array.append(pyirc.ref_array(self.vislightfiles, self.formatpars, self.ny, tslicesk, False))
+         darkref_array.append(pyirc.ref_array(self.vislightfiles, self.formatpars, self.ny, tslicesk, False))
+      for ix in range(self.nx):
+        if self.is_good[iy,ix]>.5:
+          # pull out basic parameters
+          basicinfo = self.full_info[iy,ix,:self.swi.Nb].tolist()
+          basicinfo[self.swi.I] = Ie[iy,ix]
+          basicinfo[self.swi.beta] = self.full_info[iy,ix,self.swi.Nbb+1:self.swi.Nbb+self.swi.p] # in DN, +
+          beta_in_e = -basicinfo[self.swi.beta]/basicinfo[self.swi.g]**numpy.linspace(1,self.swi.p-1,num=self.swi.p-1) # in e , -
+    
+          tslices0 = numpy.asarray([self.ts_vis, self.ts_vis+self.tchar1_vis, self.ts_vis+self.tchar2_vis])
+          # initialize vector to stack correlation matrices:
+          corr_stack = []
+          for k in range(nvis):
+            tslicesk = (tslices0+k).tolist()
+            region_cube = pyirc.pixel_data(self.vislightfiles, self.formatpars, [self.dx*ix, self.dx*(ix+1), self.dy*iy, self.dy*(iy+1)], tslicesk,
+                          [self.sensitivity_spread_cut, True], False)
+            dark_cube = pyirc.pixel_data(visdarkfiles, formatpars, [dx*ix, dx*(ix+1), dy*iy, dy*(iy+1)], tslicesk,
+                          [self.sensitivity_spread_cut, False], False)
+            if self.fullref:
+              lightref = lightref_array[k]
+              darkref = darkref_array[k]
+            else:
+              lightref = numpy.zeros((len(self.vislightfiles), self.ny, 2*len(tslicesk)+1))
+              darkref = numpy.zeros((len(self.visdarkfiles), self.ny, 2*len(tslicesk)+1))
+            info = pyirc.corr_5x5(region_cube, dark_cube, tslicesk, lightref[:,iy,:], darkref[:,iy,:], self.basicpar, False)
+    
+            corr_matrix = info[4]
+            var1 = info[2]
+            var2 = info[3]
+            # center of corr_matrix is element (2, 2) of the numpy array
+            corr_matrix[2][2] = var2 - var1
+    
+            # median corrections to the central array of the auto-correlation matrix
+            # (so we multiply the measured variance by the measured/predicted median,
+            # this would perfectly correct for errors in Ie if the detector were exactly linear)
+            med21 = info[1]
+            predictmed = (tslicesk[2]*Ie[iy,ix]*(1. - numpy.sum(beta_in_e * (tslicesk[2]*Ie[iy,ix])**numpy.linspace(1,self.swi.p-1,num=self.swi.p-1)) )\
+                         - tslicesk[1]*Ie[iy,ix]*(1. - numpy.sum(beta_in_e * (tslicesk[1]*Ie[iy,ix])**numpy.linspace(1,self.swi.p-1,num=self.swi.p-1)) ))\
+                         / basicinfo[self.swi.g]
+            if self.basicpar.vis_med_correct: corr_matrix[2][2] /= med21/predictmed
+    
+            corr_stack.append(corr_matrix)
+            # end loop over k
+    
+          corr_mean = numpy.mean(corr_stack, axis=0)
+          # corr_mean is the v vector of eq. 34
+    
+          # now get the cube of data for BFE
+          region_cube = pyirc.pixel_data(self.vislightfiles, self.formatpars, [self.dx*ix, self.dx*(ix+1), self.dy*iy, self.dy*(iy+1)], tslices,
+                        [self.sensitivity_spread_cut, True], False)
+        
+          # iterate to solve BFE, Phi
+        
+          np2 = 2
+          self.bfepar.Phi = numpy.zeros((2*np2+1,2*np2+1)); self.bfepar.Phi[np2,np2] = 1.e-12 # initialize to essentially zero
+          if self.copy_ir_bfe:
+            bfek_ir = self.full_info[iy,ix,self.swi.Nb:self.swi.Nbb].reshape((2*np2+1,2*np2+1))
+            bfek = numpy.copy(bfek_ir)
+          else:
+            bfek  = pyirc.bfe(region_cube, self.tslices, basicinfo, self.bfepar, self.swi, False) 
+          tol = 1e-9
+          diff = 1
+          count = 0
+          NN = 21
+        
+          while numpy.max(numpy.abs(diff)) > tol:
+    
+            ts_vis_ref = self.ts_vis - self.basicpar.reset_frame
+            tslices_vis = [ts_vis_ref,ts_vis_ref+self.tchar2_vis,ts_vis_ref,ts_vis_ref+self.tchar2_vis,nvis]
+            tslices_vis1 = [ts_vis_ref,ts_vis_ref+self.tchar1_vis,ts_vis_ref,ts_vis_ref+self.tchar1_vis,nvis]
+            normPhi = numpy.sum(self.bfepar.Phi) # this is omega/(1+omega)
+            omega = normPhi / (1-normPhi)
+            p2 = self.bfepar.Phi/normPhi
+            sigma_a = 0.
+            avals = [basicinfo[self.swi.alphaV], basicinfo[self.swi.alphaH], basicinfo[self.swi.alphaD]] # (aV, aH, aD)
+            truecorr = ftsolve.solve_corr_vis_many(bfek,NN,basicinfo[self.swi.I],basicinfo[self.swi.g],
+                                           beta_in_e,sigma_a,tslices_vis,avals,omega=omega,p2=p2)
+            #if count==0:
+            #  print(tslices_vis, p2, truecorr)
+            truecorr[2][2] = (truecorr-ftsolve.solve_corr_vis_many(bfek,NN,basicinfo[self.swi.I],basicinfo[self.swi.g],
+                                           beta_in_e,sigma_a,tslices_vis1,avals,omega=omega,p2=p2))[2][2]
+            diff = basicinfo[self.swi.g]**2/(2*basicinfo[self.swi.I]*self.tchar2_vis) * (corr_mean - truecorr)
+            diff[2][2] = basicinfo[self.swi.g]**2/(2*basicinfo[self.swi.I]*(self.tchar2_vis-self.tchar1_vis)) * (corr_mean[2][2] - truecorr[2][2])
+            self.bfepar.Phi += .5*(diff + numpy.flip(diff)) # force symmetrization here to avoid instability
+        
+            # update BFE
+            if self.copy_ir_bfe:
+              bfek = numpy.copy(bfek_ir)
+            else:
+              bfek  = pyirc.bfe(region_cube, self.tslices, self.basicinfo, self.bfepar, self.swi, False) 
+            count += 1
+            
+            if count>100:
+                if verbose:
+                  print('100 iterations of BFE/Phi solver reached, diff={:0.6f}'.format(numpy.max(numpy.abs(diff))))
+                break
+    
+          # save information
+          vis_bfek[iy,ix,:,:] = bfek
+          vis_Phi[iy,ix,:,:] = self.bfepar.Phi
+          op2 = ftsolve.op2_to_pars(self.bfepar.Phi)
+          QYomega[iy,ix] = op2[0]
+          cdCov[iy,ix,0] = op2[1]
+          cdCov[iy,ix,1] = op2[2]
+          cdCov[iy,ix,2] = op2[3]
+          cdNiter[iy,ix] = op2[-1]
+    
+          # end loop over super-pixels
+    if verbose:
+      print('|')
+      print('')
+    
+      # Now get ready to write information
+      print('Mean BFE kernel:')
+      print(numpy.mean(vis_bfek,axis=(0,1)))
+      print('Mean Phi kernel:')
+      print(numpy.mean(vis_Phi,axis=(0,1)))
+      print('sigma Phi kernel:')
+      print(numpy.std(vis_Phi,axis=(0,1)))
+      print('Charge diffusion parameters:')
+      print(ftsolve.op2_to_pars(numpy.mean(vis_Phi,axis=(0,1))))
+    
+    # put all information into a gigantic array
+    vis_out_data = numpy.zeros((self.ny,self.nx,56))
+    vis_out_data[:,:,:25] = vis_bfek.reshape(self.ny,self.nx,25)
+    vis_out_data[:,:,25:50] = vis_Phi.reshape(self.ny,self.nx,25)
+    vis_out_data[:,:,50] = QYomega
+    vis_out_data[:,:,51:54] = cdCov
+    vis_out_data[:,:,54] = Ie
+    vis_out_data[:,:,55] = cdNiter
+    ncol = 56
+    #
+    # now we have in each super-pixel, 55 "columns" of data
+    # columns  0 .. 24 are the visible BFE kernel in e^-1 (order: dy=-2 dx=-2; dy=-2 dx=-1; dy=-2 dx=0; ...)
+    # columns 25 .. 49 are the visible Phi kernel (order: dy=-2 dx=-2; dy=-2 dx=-1; dy=-2 dx=0; ...)
+    # column 50 is the quantum yield omega parameter
+    # column 51 is Cxx charge diffusion in pixels^2
+    # column 52 is Cxy charge diffusion in pixels^2
+    # column 53 is Cyy charge diffusion in pixels^2
+    # column 54 is visible current Ie (e per frame)
+    # column 55 is number of iterations in p2 kernel
+    self.vis_col = {
+      "BFE00": 12,
+      "Phi00": 37,
+      "QYOmega": 50,
+      "Cxx": 51,
+      "Cxy": 52,
+      "Cyy": 53,
+      "Ie": 54,
+      "cdNiter": 55
+    }
+    
+    mean_vis_out_data = numpy.mean(numpy.mean(vis_out_data, axis=0), axis=0)/numpy.mean(is_good)
+    std_vis_out_data = numpy.sqrt(numpy.mean(numpy.mean(vis_out_data**2, axis=0), axis=0)/numpy.mean(is_good) - mean_vis_out_data**2)
+    if verbose:
+      print ('')
+      print (vis_out_data.shape)
+      print ('Number of good regions =', numpy.sum(is_good))
+      print('column, mean, stdev, stdev on the mean:')
+      for k in range(ncol):
+        print('{:2d} {:12.5E} {:12.5E} {:12.5E}'.format(k, mean_vis_out_data[k], std_vis_out_data[k], std_vis_out_data[k]/numpy.sqrt(numpy.sum(self.is_good)-1)))
+      print ('')
+
+    # save to file and class
+    numpy.savetxt(outstem+'_visinfo.txt', vis_out_data.reshape(ny*nx, ncol))
+    self.vis_out_data = vis_out_data
+
+  def vis_plots(self):
+    """Make plots for the visible light characterization."""
+
+    # Saving some figures of these quantities:
+    matplotlib.rcParams.update({'font.size': 12})
+    num_bins = 30
+    F = plt.figure(figsize=(8,6))
+    S = F.add_subplot(2,2,1)
+    S.hist(self.vis_out_data[:,:,self.vis_col["QYomega"]].ravel(),bins=numpy.linspace(0, 0.1, num=num_bins))
+    S.set_xlabel(r'$\omega$')
+    
+    S = F.add_subplot(2,2,2)
+    S.hist(Ie.ravel(),bins=num_bins)
+    S.set_xlabel(r'$I_e$')
+    
+    S = F.add_subplot(2,2,3)
+    S.hist(self.vis_out_data[:,:,self.vis_col["cdNiter"]].ravel(),bins=numpy.linspace(0, 100, num=num_bins))
+    S.set_xlabel(r'Number of iterations')
+    
+    S = F.add_subplot(2,2,4)
+    S.hist(self.vis_out_data[:,:,self.vis_col["Cxx"]].ravel(), num_bins, histtype='step', label=r'$C_{xx}$', linewidth=1.5, linestyle='-')
+    S.hist(self.vis_out_data[:,:,self.vis_col["Cxy"]].ravel(), num_bins, histtype='step', label=r'$C_{xy}$', linewidth=1.5, linestyle='--')
+    S.hist(self.vis_out_data[:,:,self.vis_col["Cyy"]].ravel(), num_bins, histtype='step', label=r'$C_{yy}$', linewidth=1.5, linestyle='-.')
+    S.set_xlabel(r'Charge diffusion component in pixels$^2$')
+    S.legend(loc='upper right', fontsize=12,frameon=False)
+    F.set_tight_layout(True)
+    F.savefig(self.outstem+'_vis_hist.pdf', bbox_inches='tight')
+    plt.close(F)
+    
+    F = plt.figure(figsize=(15,8))
+    S = F.add_subplot(2,3,1)
+    S.set_title(r'$\omega$')
+    S.set_xlabel('Super pixel X/{:d}'.format(self.dx))
+    S.set_ylabel('Super pixel Y/{:d}'.format(self.dy))
+    im = S.imshow(self.vis_out_data[:,:,self.vis_col["QYomega"]], cmap=use_cmap, origin='lower')
+    F.colorbar(im, orientation='vertical')
+    
+    S = F.add_subplot(2,3,2)
+    S.set_title(r'$I_e$')
+    S.set_xlabel('Super pixel X/{:d}'.format(self.dx))
+    #S.set_ylabel('Super pixel Y/{:d}'.format(self.dy))
+    im = S.imshow(self.vis_out_data[:,:,self.vis_col["Ie"]], cmap=use_cmap, origin='lower')
+    F.colorbar(im, orientation='vertical')
+    
+    S = F.add_subplot(2,3,3)
+    S.set_title(r'Number of iterations')
+    S.set_xlabel('Super pixel X/{:d}'.format(self.dx))
+    #S.set_ylabel('Super pixel Y/{:d}'.format(self.dy))
+    im = S.imshow(self.vis_out_data[:,:,self.vis_col["cdNiter"]], cmap=use_cmap, origin='lower')
+    F.colorbar(im, orientation='vertical')
+    
+    S = F.add_subplot(2,3,4)
+    S.set_title(r'$C_{xx}$')
+    S.set_xlabel('Super pixel X/{:d}'.format(self.dx))
+    S.set_ylabel('Super pixel Y/{:d}'.format(self.dy))
+    im = S.imshow(self.vis_out_data[:,:,self.vis_col["Cxx"]]], cmap=use_cmap, origin='lower')
+    F.colorbar(im, orientation='vertical')
+    
+    S = F.add_subplot(2,3,5)
+    S.set_title(r'$C_{xy}$')
+    S.set_xlabel('Super pixel X/{:d}'.format(self.dx))
+    #S.set_ylabel('Super pixel Y/{:d}'.format(self.dy))
+    im = S.imshow(self.vis_out_data[:,:,self.vis_col["Cxy"]]], cmap=use_cmap, origin='lower')
+    F.colorbar(im, orientation='vertical')
+    
+    S = F.add_subplot(2,3,6)
+    S.set_title(r'$C_{yy}$')
+    S.set_xlabel('Super pixel X/{:d}'.format(self.dx))
+    #S.set_ylabel('Super pixel Y/{:d}'.format(self.dy))
+    im = S.imshow(self.vis_out_data[:,:,self.vis_col["Cyy"]]], cmap=use_cmap, origin='lower')
+    F.colorbar(im, orientation='vertical')
+    
+    # F.set_tight_layout(True)
+    F.savefig(self.outstem+'_vis_matrices.pdf', bbox_inches='tight')
+    plt.close(F)
+
 def run_ir_all(infile):
   """
   Runs the IR characterization.
@@ -1252,7 +1683,7 @@ def run_ir_all(infile):
 
   # Get configuration and copy to the output.
   with open(infile) as f:
-    cf = Config(f.readlines())
+    cf = Config(f.readlines(), verbose=True)
   shutil.copyfile(infile, cf.outstem + '_config.txt')
   cf.fit_parameters(verbose=True)
   cf.generate_nonlinearity(write_to_file=True)
@@ -1265,6 +1696,33 @@ def run_ir_all(infile):
   with open(cf.outstem+'_hot.txt', 'w') as f:
     f.write(s)
   cf.hotpixel_plots()
+
+def run_vis_all(infile, run_ir_first=True):
+  """
+  Runs the visible characterization.
+
+  Parameters
+  ----------
+  infile : str
+      The input file.
+  run_ir_first : bool, optional
+      Run the IR characterization first (turn off if you already ran it!).
+
+  Returns
+  -------
+  None
+
+  """
+
+  if run_ir_first:
+    run_ir_all(infile)
+
+  # Get configuration. Note this is a new configuration instance!
+  with open(infile) as f:
+    cf = Config(f.readlines(), visible_run=True, verbose=True)
+
+  cf.compute_vis_quantities(verbose=True)
+  cf.vis_plots()
 
 ### <== MAIN PROGRAM BELOW HERE ==> ###
 
