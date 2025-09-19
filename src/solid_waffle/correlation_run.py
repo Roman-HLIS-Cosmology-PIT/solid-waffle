@@ -23,7 +23,7 @@ import sys
 import time
 import re
 import numpy
-from . import pyirc
+from . import pyirc, ftsolve
 
 import matplotlib
 matplotlib.use('Agg')
@@ -204,13 +204,17 @@ class Config():
     self.use_cmap = 'gnuplot'
 
     self.mydet = ''
-    self.lightfiles = self.darkfiles = []
+    self.lightfiles = []
+    self.darkfiles = []
     if self.visible_run:
-      self.vislightfiles = self.visdarkfiles = []
+      self.vislightfiles = []
+      self.visdarkfiles = []
     self.formatpars = 1
     self.nx = self.ny = 32
     self.tslices = [3,11,13,21]
-    self.tslicesM2a = self.tslicesM2b = self.tslicesM3 = []
+    self.tslicesM2a = []
+    self.tslicesM2b = []
+    self.tslicesM3 = []
     self.fullref = True
     self.sensitivity_spread_cut = .1
     self.critfrac = 0.75
@@ -274,7 +278,10 @@ class Config():
 
       # Cancellations
       m = re.search(r'^[A-Z]+\:', line)
-      if m: is_in_light = is_in_dark = False
+      if m:
+        is_in_light = is_in_dark = False
+        if self.visible_run:
+          is_in_vislight = is_in_visdark = False
 
       # Searches for files -- must be first given the structure of this script!
       if is_in_light:
@@ -503,9 +510,9 @@ class Config():
       for iy in range(self.ny):
         for ix in range(self.nx):
           if pcoefX[1,iy,ix]!=0:
-            full_info[iy,ix,self.swi.Nbb] = -pcoefX[0,iy,ix]/pcoefX[1,iy,ix]
+            self.full_info[iy,ix,self.swi.Nbb] = -pcoefX[0,iy,ix]/pcoefX[1,iy,ix]
             for ooo in range(2,self.swi.p+1):
-              full_info[iy,ix,self.swi.Nbb+ooo-1] = pcoefX[ooo,iy,ix]/pcoefX[1,iy,ix]**ooo
+              self.full_info[iy,ix,self.swi.Nbb+ooo-1] = pcoefX[ooo,iy,ix]/pcoefX[1,iy,ix]**ooo
           else:
             self.full_info[iy,ix,pyirc.swi.Nbb] = -1e49 # error code
 
@@ -529,7 +536,7 @@ class Config():
         if len(info)>0:
           self.is_good[iy,ix] = 1
           thisinfo = info.copy()
-          if basicpar.use_allorder:
+          if self.basicpar.use_allorder:
             thisinfo[self.swi.beta] = self.full_info[iy,ix,self.swi.Nbb+1:self.swi.Nbb+self.swi.p]
           if self.mychar.lower()=='advanced':
             boxpar = [self.dx*ix, self.dx*(ix+1), self.dy*iy, self.dy*(iy+1)]
@@ -552,9 +559,9 @@ class Config():
           if numpy.isnan(bfeCoefs).any():
             bfeCoefs = numpy.zeros((2*self.swi.s+1,2*self.swi.s+1))
             self.is_good[iy,ix] = 0
-            info += bfeCoefs[0:2*self.swi.s+1,0:2*self.swi.s+1].flatten().tolist()
-          else:
-            info = numpy.zeros((self.swi.Nbb)).tolist()
+          info += bfeCoefs[0:2*self.swi.s+1,0:2*self.swi.s+1].flatten().tolist()
+        else:
+          info = numpy.zeros((self.swi.Nbb)).tolist()
 
         # save the information, putting in 0's if the super-pixel is not good.
         if len(info)==self.swi.Nbb:
@@ -605,13 +612,13 @@ class Config():
     # Non-linearity cube
     ntSub = self.tslices[-1]
     nlcube, self.nlfit, self.nlder = pyirc.gen_nl_cube(self.lightfiles, self.formatpars, ntSub, [self.ny,self.nx],
-      self.full_info[:,:,self.swi.beta]*full_info[:,:,self.swi.I], 'dev', self.swi, False)
+      self.full_info[:,:,self.swi.beta]*self.full_info[:,:,self.swi.I], 'dev', self.swi, False)
     if write_to_file:
       thisOut = open(self.outstem+'_nl.txt', 'w')
-      for iy in range(ny):
-        for ix in range(nx):
-          thisOut.write('{:3d} {:3d} {:1d} {:9.6f} {:9.6f}'.format(iy,ix,int(is_good[iy,ix]),
-            full_info[iy,ix,pyirc.swi.beta]*full_info[iy,ix,pyirc.swi.g]*1e6, full_info[iy,ix,pyirc.swi.g]))
+      for iy in range(self.ny):
+        for ix in range(self.nx):
+          thisOut.write('{:3d} {:3d} {:1d} {:9.6f} {:9.6f}'.format(iy,ix,int(self.is_good[iy,ix]),
+            self.full_info[iy,ix,self.swi.beta]*self.full_info[iy,ix,self.swi.g]*1e6, self.full_info[iy,ix,self.swi.g]))
           for it in range(ntSub):
             thisOut.write(' {:7.1f}'.format(nlcube[it,iy,ix]))
           thisOut.write('\n')
@@ -632,7 +639,7 @@ class Config():
     S.set_title(r'Good pixel map (%)')
     S.set_xlabel('Super pixel X/{:d}'.format(dx))
     S.set_ylabel('Super pixel Y/{:d}'.format(dy))
-    im = S.imshow(full_info[:,:,0]*100/self.npix, cmap=self.use_cmap, aspect=ar, interpolation='nearest', origin='lower',
+    im = S.imshow(self.full_info[:,:,0]*100/self.npix, cmap=self.use_cmap, aspect=ar, interpolation='nearest', origin='lower',
       vmin=100*self.critfrac, vmax=100)
     F.colorbar(im, orientation='vertical')
     S = F.add_subplot(3,2,2)
@@ -640,14 +647,14 @@ class Config():
     S.set_xlabel('Super pixel X/{:d}'.format(dx))
     S.set_ylabel('Super pixel Y/{:d}'.format(dy))
     svmin, svmax = pyirc.get_vmin_vmax(self.full_info[:,:,self.swi.g], spr)
-    im = S.imshow(full_info[:,:,self.swi.g], cmap=self.use_cmap, aspect=ar, interpolation='nearest', origin='lower',
+    im = S.imshow(self.full_info[:,:,self.swi.g], cmap=self.use_cmap, aspect=ar, interpolation='nearest', origin='lower',
       vmin=svmin, vmax=svmax)
     F.colorbar(im, orientation='vertical')
     S = F.add_subplot(3,2,3)
     S.set_title(r'IPC map $\alpha$ (%)')
     S.set_xlabel('Super pixel X/{:d}'.format(dx))
     S.set_ylabel('Super pixel Y/{:d}'.format(dy))
-    svmin, svmax = pyirc.get_vmin_vmax((self.full_info[:,:,self.swi.alphaH]+full_info[:,:,self.swi.alphaV])/2.*100., spr)
+    svmin, svmax = pyirc.get_vmin_vmax((self.full_info[:,:,self.swi.alphaH]+self.full_info[:,:,self.swi.alphaV])/2.*100., spr)
     im = S.imshow((self.full_info[:,:,self.swi.alphaH]+self.full_info[:,:,self.swi.alphaV])/2.*100., cmap=self.use_cmap, aspect=ar,
       interpolation='nearest', origin='lower', vmin=svmin, vmax=svmax)
     F.colorbar(im, orientation='vertical')
@@ -676,7 +683,7 @@ class Config():
       vmin=svmin, vmax=svmax)
     F.colorbar(im, orientation='vertical')
     F.set_tight_layout(True)
-    F.savefig(outstem+'_multi.pdf')
+    F.savefig(self.outstem+'_multi.pdf')
     plt.close(F)
 
   def alt_methods(self, verbose=False):
@@ -699,7 +706,7 @@ class Config():
     self.used_2a = False
     if len(self.tslicesM2a)!=4 or self.tslicesM2a[-1]<=self.tslicesM2a[-2]:
       if verbose:
-        print ('Error: tslicesM2a =',tslicesM2a,'does not have length 4 or has insufficient span.')
+        print ('Error: tslicesM2a =',self.tslicesM2a,'does not have length 4 or has insufficient span.')
         print ('Skipping Method 2a ...')
     else:
       # Proceed to implement Method 2a
@@ -867,7 +874,7 @@ class Config():
       self.PV2a = max(vec)-min(vec)
       if verbose:
         print ('PV: ', PV2a)
-    if used_2b:
+    if self.used_2b:
       if verbose:
         print ('2b:')
       vec = []
@@ -882,7 +889,7 @@ class Config():
       self.PV2b = max(vec)-min(vec)
       if verbose:
         print ('PV: ', PV2b)
-    if used_3:
+    if self.used_3:
       if verbose:
         print ('3:')
       vec = []
@@ -907,7 +914,7 @@ class Config():
 
     matplotlib.rcParams.update({'font.size': 8})
     F = plt.figure(figsize=(3.5,9))
-    if used_2a:
+    if self.used_2a:
       S = F.add_subplot(3,1,1)
       S.set_title(r'Raw gain vs. interval duration')
       S.set_xlabel(r'Signal level $It_{'+'{:d}'.format(self.tslicesM2a[0])+r',d}$ [ke]')
@@ -927,7 +934,7 @@ class Config():
       S.plot(xr, yc+(xr-xc)*self.slope_2a_BFE*1e3, 'g--', label='pure BFE')
       S.plot(xr, yc+(xr-xc)*self.slope_2a_NLIPC*1e3, 'b-', label='pure NL-IPC')
       S.legend(loc=2)
-    if used_2b:
+    if self.used_2b:
       S = F.add_subplot(3,1,2)
       S.set_title(r'Raw gain vs. interval center')
       S.set_xlabel(r'Signal level $It_{'+'{:d}'.format(self.tslicesM2b[0])+r',a}$ [ke]')
@@ -947,7 +954,7 @@ class Config():
       S.plot(xr, yc+(xr-xc)*self.slope_2b_BFE*1e3, 'g--', label='pure BFE')
       S.plot(xr, yc+(xr-xc)*self.slope_2b_NLIPC*1e3, 'b-', label='pure NL-IPC')
       S.legend(loc=2)
-    if used_3:
+    if self.used_3:
       S = F.add_subplot(3,1,3)
       S.set_title(r'CDS ACF vs. signal')
       S.set_xlabel(r'Signal level $It_{'+'{:d}'.format(self.tslicesM3[0])+r',d}$ [ke]')
@@ -970,7 +977,7 @@ class Config():
       S.plot(xr, yc+(xr-xc)*self.slope_3_beta*1e3, 'k:', label='beta only')
       S.legend(loc=2)
     F.set_tight_layout(True)
-    F.savefig(outstem+'_m23.pdf')
+    F.savefig(self.outstem+'_m23.pdf')
     plt.close(F)
 
   def text_output(self):
@@ -1011,7 +1018,7 @@ class Config():
     thisOut += '# Reference pixel subtraction for linearity: {:s}\n'.format(str(self.fullref))
     thisOut += '# Quantile for variance computation = {:9.6f}%\n'.format(self.basicpar.g_ptile)
     thisOut += '# Clipping fraction epsilon = {:9.7f}\n'.format(self.basicpar.epsilon)
-    thisOut += '# Lead-trail subtraction for IPC correlation = ' + str(basicpar.leadtrailSub) + '\n'
+    thisOut += '# Lead-trail subtraction for IPC correlation = ' + str(self.basicpar.leadtrailSub) + '\n'
     thisOut += '# Characterization type: '+self.mychar+'\n'
     if self.mychar.lower()=='advanced':
       thisOut += '#   dt = {:d},{:d}, ncycle = {:d}\n'.format(self.tchar1,self.tchar2,self.ncycle)
@@ -1075,13 +1082,13 @@ class Config():
       for ip in range(2, self.swi.p+1):
         thisOut += '# {:3d}, additional non-linearity coefficient, order {:d} (DN^-{:d})\n'.format(col, ip, ip-1)
         col+=1
-    if used_2a:
+    if self.used_2a:
       thisOut += '# {:3d}, Method 2a slope (e^-1)\n'.format(col)
       col+=1
-    if used_2b:
+    if self.used_2b:
       thisOut += '# {:3d}, Method 2b slope (e^-1)\n'.format(col)
       col+=1
-    if used_3:
+    if self.used_3:
       thisOut += '# {:3d}, Method 3 slope (e^-1)\n'.format(col)
       col+=1
     thisOut += '#\n'
@@ -1090,13 +1097,13 @@ class Config():
       for ix in range(self.nx):
         # Print the column first, then row (normal human-read order, note this is the reverse of internal Python)
         thisOut += '{:3d} {:3d}'.format(ix,iy)
-        for col in range(my_dim):
+        for col in range(numpy.shape(self.full_info)[-1]):
           thisOut += ' {:14.7E}'.format(self.full_info[iy,ix,col])
-        if used_2a:
+        if self.used_2a:
           thisOut += ' {:14.7E}'.format(self.Method2a_slopes[iy,ix])
-        if used_2b:
+        if self.used_2b:
           thisOut += ' {:14.7E}'.format(self.Method2b_slopes[iy,ix])
-        if used_3:
+        if self.used_3:
           thisOut += ' {:14.7E}'.format(self.Method3_slopes[iy,ix])
         thisOut += '\n'
 
@@ -1120,7 +1127,7 @@ class Config():
 
     # exit if the hot pixel analysis is not enabled.
     if not self.hotpix:
-      return
+      return ""
 
     if verbose:
       print ('Start hot pixels ...')
@@ -1132,7 +1139,7 @@ class Config():
     if self.hotpix_logtspace:
       self.htsteps = [1]
       for k in range(1,12):
-        if 2**k<NTMAX-1: self.htsteps += [2**k]
+        if 2**k<self.NTMAX-1: self.htsteps += [2**k]
         if k>=2:
           if 5*2**(k-2)<self.NTMAX-1: self.htsteps += [5*2**(k-2)]
         if 3*2**(k-1)<self.NTMAX-1: self.htsteps += [3*2**(k-1)]
@@ -1141,7 +1148,7 @@ class Config():
       self.htsteps += [self.NTMAX-1]
     beta_gain = self.full_info[:,:,self.swi.beta]*self.full_info[:,:,self.swi.g]
     if verbose: print (beta_gain)
-    hotcube = pyirc.hotpix_ipc(self.hotY, self.hotX, self.darkfiles, self.formatpars, htsteps, [beta_gain, False], True)
+    hotcube = pyirc.hotpix_ipc(self.hotY, self.hotX, self.darkfiles, self.formatpars, self.htsteps, [beta_gain, False], True)
     nhstep = len(self.htsteps)
     if verbose: print ('number of time steps ->', nhstep)
     fromcorr_alpha = numpy.zeros((len(self.hotX)))
@@ -1178,9 +1185,9 @@ class Config():
     delta = .5/numpy.sqrt(len(self.hotX))
     for t in range(1,nhstep):
       my_y = hotpix_alpha[:,t]-hotpix_alpha[:,-1]
-      if ref_for_hotpix_is_autocorr: my_y = hotpix_alpha[:,t] - fromcorr_alpha
+      if self.ref_for_hotpix_is_autocorr: my_y = hotpix_alpha[:,t] - fromcorr_alpha
       ipcmed_x[t] = numpy.nanpercentile(hotpix_signal[:, t], 50.)
-      if hotpix_slidemed:
+      if self.hotpix_slidemed:
         X_ = hotpix_alpha_den[:,t]
         Y_ = hotpix_alpha_num[:,t]-fromcorr_alpha*hotpix_alpha_den[:,t]
         ipcmed_y[t] = pyirc.slidemed_percentile(X_, Y_, 50)
@@ -1204,7 +1211,7 @@ class Config():
       for ix in range(NG):
         for iy in range(NG):
           # bin the auto-correlation measurements
-          suba = full_info[iy*stepy:(iy+1)*stepy, ix*stepx:(ix+1)*stepx, :]
+          suba = self.full_info[iy*stepy:(iy+1)*stepy, ix*stepx:(ix+1)*stepx, :]
           mya = (suba[:,:,self.swi.alphaH]+suba[:,:,self.swi.alphaV])/2.
           pmask = suba[:,:,0] > 0
           n = mya[pmask].size
@@ -1222,7 +1229,7 @@ class Config():
 
     # save information
     self.hotpix_signal = hotpix_signal
-    self.hotpix_alpha = alpha
+    self.hotpix_alpha = hotpix_alpha
     self.ipcmed_x = ipcmed_x
     self.ipcmed_y = ipcmed_y
     self.ipcmed_yerr = ipcmed_yerr
@@ -1236,17 +1243,20 @@ class Config():
   def hotpix_plots(self):
     """Makes the hot pixel plots."""
 
+    if not self.hotpix:
+      return
+
     nhstep = len(self.htsteps)
 
     # hot pixel plots
     matplotlib.rcParams.update({'font.size': 8})
-    if narrowfig:
+    if self.narrowfig:
       F = plt.figure(figsize=(3.5,6))
     else:
       F = plt.figure(figsize=(7,6))
     #
     # hot pixel locations
-    if narrowfig:
+    if self.narrowfig:
       S = F.add_subplot(2,1,1)
     else:
       S = F.add_subplot(2,2,1)
@@ -1288,7 +1298,7 @@ class Config():
       S.xaxis.set_ticks(numpy.linspace(0,self.hotpix_ADU_range[1],num=6)); S.yaxis.set_ticks(numpy.linspace(-1.5,1.5,num=11))
       S.grid(True, color='g', linestyle='-', linewidth=.5)
       S.scatter(SX, SY, s=.25, marker='+', color='r')
-      S.errorbar(self.ipcmed_x[1:], self.ipcmed_y[1:]/.01, yerr=ipcmed_yerr[1:]/.01, ms=2, marker='o', color='k', ls='None')
+      S.errorbar(self.ipcmed_x[1:], self.ipcmed_y[1:]/.01, yerr=self.ipcmed_yerr[1:]/.01, ms=2, marker='o', color='k', ls='None')
     #
     # comparison with auto-correlations
     if self.narrowfig:
@@ -1350,7 +1360,7 @@ class Config():
       print('Number of good regions =', numpy.sum(self.is_good))
       print('Lower-left corner ->', self.full_info[0,0,:])
     
-    if p_order==0:
+    if self.p_order==0:
       raise ValueError('Error: did not include polynomial order')
     
     # Get Ie
@@ -1442,7 +1452,7 @@ class Config():
             tslicesk = (tslices0+k).tolist()
             region_cube = pyirc.pixel_data(self.vislightfiles, self.formatpars, [self.dx*ix, self.dx*(ix+1), self.dy*iy, self.dy*(iy+1)], tslicesk,
                           [self.sensitivity_spread_cut, True], False)
-            dark_cube = pyirc.pixel_data(visdarkfiles, formatpars, [dx*ix, dx*(ix+1), dy*iy, dy*(iy+1)], tslicesk,
+            dark_cube = pyirc.pixel_data(self.visdarkfiles, self.formatpars, [self.dx*ix, self.dx*(ix+1), self.dy*iy, self.dy*(iy+1)], tslicesk,
                           [self.sensitivity_spread_cut, False], False)
             if self.fullref:
               lightref = lightref_array[k]
@@ -1474,7 +1484,8 @@ class Config():
           # corr_mean is the v vector of eq. 34
     
           # now get the cube of data for BFE
-          region_cube = pyirc.pixel_data(self.vislightfiles, self.formatpars, [self.dx*ix, self.dx*(ix+1), self.dy*iy, self.dy*(iy+1)], tslices,
+          region_cube = pyirc.pixel_data(self.vislightfiles, self.formatpars,
+                        [self.dx*ix, self.dx*(ix+1), self.dy*iy, self.dy*(iy+1)], self.tslices,
                         [self.sensitivity_spread_cut, True], False)
         
           # iterate to solve BFE, Phi
@@ -1505,17 +1516,18 @@ class Config():
                                            beta_in_e,sigma_a,tslices_vis,avals,omega=omega,p2=p2)
             #if count==0:
             #  print(tslices_vis, p2, truecorr)
-            truecorr[2][2] = (truecorr-ftsolve.solve_corr_vis_many(bfek,NN,basicinfo[self.swi.I],basicinfo[self.swi.g],
+            truecorr[2,2] = (truecorr-ftsolve.solve_corr_vis_many(bfek,NN,basicinfo[self.swi.I],basicinfo[self.swi.g],
                                            beta_in_e,sigma_a,tslices_vis1,avals,omega=omega,p2=p2))[2][2]
             diff = basicinfo[self.swi.g]**2/(2*basicinfo[self.swi.I]*self.tchar2_vis) * (corr_mean - truecorr)
-            diff[2][2] = basicinfo[self.swi.g]**2/(2*basicinfo[self.swi.I]*(self.tchar2_vis-self.tchar1_vis)) * (corr_mean[2][2] - truecorr[2][2])
+            diff[2,2] = basicinfo[self.swi.g]**2/(2*basicinfo[self.swi.I]*(self.tchar2_vis-self.tchar1_vis))\
+                         * (corr_mean[2,2] - truecorr[2,2])
             self.bfepar.Phi += .5*(diff + numpy.flip(diff)) # force symmetrization here to avoid instability
         
             # update BFE
             if self.copy_ir_bfe:
               bfek = numpy.copy(bfek_ir)
             else:
-              bfek  = pyirc.bfe(region_cube, self.tslices, self.basicinfo, self.bfepar, self.swi, False) 
+              bfek  = pyirc.bfe(region_cube, self.tslices, basicinfo, self.bfepar, self.swi, False) 
             count += 1
             
             if count>100:
@@ -1578,19 +1590,19 @@ class Config():
       "cdNiter": 55
     }
     
-    mean_vis_out_data = numpy.mean(numpy.mean(vis_out_data, axis=0), axis=0)/numpy.mean(is_good)
-    std_vis_out_data = numpy.sqrt(numpy.mean(numpy.mean(vis_out_data**2, axis=0), axis=0)/numpy.mean(is_good) - mean_vis_out_data**2)
+    mean_vis_out_data = numpy.mean(numpy.mean(vis_out_data, axis=0), axis=0)/numpy.mean(self.is_good)
+    std_vis_out_data = numpy.sqrt(numpy.mean(numpy.mean(vis_out_data**2, axis=0), axis=0)/numpy.mean(self.is_good) - mean_vis_out_data**2)
     if verbose:
       print ('')
       print (vis_out_data.shape)
-      print ('Number of good regions =', numpy.sum(is_good))
+      print ('Number of good regions =', numpy.sum(self.is_good))
       print('column, mean, stdev, stdev on the mean:')
       for k in range(ncol):
         print('{:2d} {:12.5E} {:12.5E} {:12.5E}'.format(k, mean_vis_out_data[k], std_vis_out_data[k], std_vis_out_data[k]/numpy.sqrt(numpy.sum(self.is_good)-1)))
       print ('')
 
     # save to file and class
-    numpy.savetxt(outstem+'_visinfo.txt', vis_out_data.reshape(ny*nx, ncol))
+    numpy.savetxt(outstem+'_visinfo.txt', vis_out_data.reshape(self.ny*self.nx, ncol))
     self.vis_out_data = vis_out_data
 
   def vis_plots(self):
@@ -1698,7 +1710,7 @@ def run_ir_all(infile):
   s = cf.hotpix_analysis(verbose=True)
   with open(cf.outstem+'_hot.txt', 'w') as f:
     f.write(s)
-  cf.hotpixel_plots()
+  cf.hotpix_plots()
 
 def run_vis_all(infile, run_ir_first=True):
   """

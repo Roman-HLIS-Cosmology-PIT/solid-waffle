@@ -196,7 +196,7 @@ def op2_to_pars(op2, cmin=.01):
   N = 96 # low resolution at first, upgrade when we get close
   this_np2 = 1; this_op2 = op2[np2-1:np2+2, np2-1:np2+2] # extract 3x3 for initial fitting
   dstep = .1
-  while (eps>1e-8 and j_iter<512) or N<256:
+  while (eps>1e-8 and j_iter<256) or N<256:
     # flag to go to full fitting
     if eps<1e-5 or j_iter==496:
       N=256; this_np2 = np2
@@ -238,7 +238,7 @@ def op2_to_pars(op2, cmin=.01):
     lambda1 = (cxx+cyy-np.sqrt( (cxx-cyy)**2 + (2*cxy)**2 ))/2.
     #print(omegabar, cxx, cxy, cyy, lambda1, eps, j_iter)
 
-  if j_iter==512: warnings.warn('op2_to_pars: failed to converge')
+  if j_iter==256: warnings.warn('op2_to_pars: failed to converge')
   omega = omegabar/(1-omegabar)
   return([omega, cxx, cxy, cyy, eps, j_iter])
 
