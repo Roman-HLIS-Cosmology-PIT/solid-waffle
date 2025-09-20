@@ -896,7 +896,7 @@ class Config():
       for t in range(self.tslicesM3[2], self.tslicesM3[3]+1):
         offsets = pyirc.compute_xc_corr_many(self.nlfit, self.nlder, self.full_info[:,:,self.swi.I]*self.full_info[:,:,self.swi.beta],
                  [self.tslicesM3[0],t], self.basicpar.reset_frame, self.is_good)
-        alpha3 = (full_info[:,:,pyirc.swi.alphaH]+full_info[:,:,pyirc.swi.alphaV])/2.
+        alpha3 = (self.full_info[:,:,self.swi.alphaH]+self.full_info[:,:,self.swi.alphaV])/2.
         offsets *= 2. * alpha3 * (1.-4*alpha3)
         if verbose:
           print (t, np.mean(offsets*self.is_good)/np.mean(self.is_good))
@@ -970,7 +970,7 @@ class Config():
       S.set_xlim(min(SX)-.05*(max(SX)-min(SX)), max(SX)+.05*(max(SX)-min(SX)))
       xr = np.arange(min(SX), max(SX), (max(SX)-min(SX))/256.)
       S.errorbar([xc], [min(SY)], yerr=[self.PV3], marker=',', color='k', ls='None')
-      S.text(xc+.05*(max(SX)-min(SX)), min(SY)+PV3, 'sys nl', color='k')
+      S.text(xc+.05*(max(SX)-min(SX)), min(SY)+self.PV3, 'sys nl', color='k')
       S.errorbar(SX, SY, yerr=SS, marker='x', color='r', ls='None')
       S.plot(xr, yc+(xr-xc)*self.slope_3_BFE*1e3, 'g--', label='pure BFE')
       S.plot(xr, yc+(xr-xc)*self.slope_3_NLIPC*1e3, 'b-', label='pure NL-IPC')
