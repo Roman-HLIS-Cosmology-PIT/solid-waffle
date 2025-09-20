@@ -3,7 +3,7 @@ Back end routines for solid-waffle.
 """
 
 import sys
-import numpy
+import numpy as np
 import scipy
 import astropy
 from astropy.io import fits
@@ -116,7 +116,7 @@ def load_segment(filename, formatpars, xyrange, tslices, verbose):
   nxuse = xyrange[1]-xyrange[0]
   nyuse = xyrange[3]-xyrange[2]
   ntslice_use = len(tslices)
-  output_cube = numpy.zeros((ntslice_use, nyuse, nxuse))
+  output_cube = np.zeros((ntslice_use, nyuse, nxuse))
 
   # Switch based on input format
   if formatpars==1 or formatpars==2 or formatpars==5:
@@ -128,7 +128,7 @@ def load_segment(filename, formatpars, xyrange, tslices, verbose):
         if ts>0 and tslices[ts]==tslices[ts-1]:
           output_cube[ts,:,:] = output_cube[ts-1,:,:] # don't read this slice again
         else:
-          output_cube[ts,:,:] = 65535 - numpy.array(fileh[0][t-1, xyrange[2]:xyrange[3], xyrange[0]:xyrange[1]])
+          output_cube[ts,:,:] = 65535 - np.array(fileh[0][t-1, xyrange[2]:xyrange[3], xyrange[0]:xyrange[1]])
       fileh.close()
     else:
       hdus = fits.open(filename)
@@ -147,7 +147,7 @@ def load_segment(filename, formatpars, xyrange, tslices, verbose):
       N = get_nside(formatpars)
       for ts in range(ntslice_use):
         t = tslices[ts]
-        output_cube[ts,:,:] = numpy.array(fileh[t][xyrange[2]:xyrange[3], xyrange[0]:xyrange[1]])
+        output_cube[ts,:,:] = np.array(fileh[t][xyrange[2]:xyrange[3], xyrange[0]:xyrange[1]])
       fileh.close()
     else:
       print ('Error: non-fitsio methods not yet supported for formatpars=3 or 7')
@@ -161,7 +161,7 @@ def load_segment(filename, formatpars, xyrange, tslices, verbose):
         if ts>=1 and t==tslices[ts-1]:
           output_cube[ts,:,:] = output_cube[ts-1,:,:] # asked for same slice again
         else:
-          output_cube[ts,:,:] = numpy.array(fileh[1][0, t-1, xyrange[2]:xyrange[3], xyrange[0]:xyrange[1]])
+          output_cube[ts,:,:] = np.array(fileh[1][0, t-1, xyrange[2]:xyrange[3], xyrange[0]:xyrange[1]])
       fileh.close()
     else:
       print ('Error: non-fitsio methods not yet supported for formatpars=4')
@@ -175,7 +175,7 @@ def load_segment(filename, formatpars, xyrange, tslices, verbose):
         if ts>=1 and t==tslices[ts-1]:
           output_cube[ts,:,:] = output_cube[ts-1,:,:] # asked for same slice again
         else:
-           output_cube[ts,:,:] = numpy.array(fileh[0][t-1, xyrange[2]:xyrange[3], xyrange[0]:xyrange[1]])
+           output_cube[ts,:,:] = np.array(fileh[0][t-1, xyrange[2]:xyrange[3], xyrange[0]:xyrange[1]])
       fileh.close()
     else:
       print ('Error: non-fitsio methods not yet supported for formatpars=5')
@@ -189,7 +189,7 @@ def load_segment(filename, formatpars, xyrange, tslices, verbose):
         if ts>=1 and t==tslices[ts-1]:
           output_cube[ts,:,:] = output_cube[ts-1,:,:] # asked for same slice again
         else:
-          output_cube[ts,:,:] = 65535 - numpy.array(fileh[1][0, t-1, xyrange[2]:xyrange[3], xyrange[0]:xyrange[1]])
+          output_cube[ts,:,:] = 65535 - np.array(fileh[1][0, t-1, xyrange[2]:xyrange[3], xyrange[0]:xyrange[1]])
       fileh.close()
     else:
       print ('Error: non-fitsio methods not yet supported for formatpars=6')
@@ -366,18 +366,18 @@ def pyIRC_percentile(this_array, mask, perc, disc=True):
 
   val = this_array.flatten()
   ma = mask.flatten()
-  w = numpy.array([val[x] for x in numpy.where(ma>.5)])
-  n = numpy.size(w)
+  w = np.array([val[x] for x in np.where(ma>.5)])
+  n = np.size(w)
   if disc:
-    ctr = numpy.percentile(w,perc)
-    n1 = numpy.count_nonzero(w<ctr-.499999)
-    n2 = numpy.count_nonzero(w<=ctr+.499999)
+    ctr = np.percentile(w,perc)
+    n1 = np.count_nonzero(w<ctr-.499999)
+    n2 = np.count_nonzero(w<=ctr+.499999)
     assert n1<=n2
     if n1==n2: return(ctr)
     dctr = (perc/100.*n-(n1+n2)/2.)/float(n2-n1)
     return(ctr + dctr)
-  #w -= numpy.modf(numpy.linspace(0,(1.+numpy.sqrt(5.))/2*(n-1), num=n))[0] - .5
-  return numpy.percentile(w,perc)
+  #w -= np.modf(np.linspace(0,(1.+np.sqrt(5.))/2*(n-1), num=n))[0] - .5
+  return np.percentile(w,perc)
 
 def pyIRC_mean(this_array, mask):
   """
@@ -401,8 +401,8 @@ def pyIRC_mean(this_array, mask):
 
   val = this_array.flatten()
   ma = mask.flatten()
-  w = numpy.array([val[x] for x in numpy.where(ma>.5)])
-  return numpy.mean(w)
+  w = np.array([val[x] for x in np.where(ma>.5)])
+  return np.mean(w)
 
 def ref_corr(filename, formatpars, yrange, tslices, verbose):
   """
@@ -461,18 +461,18 @@ def ref_corr(filename, formatpars, yrange, tslices, verbose):
   my_array_R = my_array_band[:,:,-4:]
   #my_array_L = load_segment(filename, formatpars, [0,4]+yrange, tslices, False)
   #my_array_R = load_segment(filename, formatpars, [N-4,N]+yrange, tslices, False)
-  my_array_LR = numpy.concatenate((my_array_L, my_array_R), axis=2)
+  my_array_LR = np.concatenate((my_array_L, my_array_R), axis=2)
   if verbose: print (N, my_array_LR.shape)
 
   for ts in range(ntslices):
-    output_ref.append(numpy.median(my_array_LR[ts,:,:]))
+    output_ref.append(np.median(my_array_LR[ts,:,:]))
   for ts in range(ntslices):
     diff_array = my_array_LR[0,:,:] - my_array_LR[ts,:,:]
-    output_ref.append(numpy.median(diff_array))
+    output_ref.append(np.median(diff_array))
   if ntslices>1:
     diff_array = my_array_LR[ntslices-2,:,:] - my_array_LR[ntslices-1,:,:]\
                  -(my_array_LR[0,:,:]-my_array_LR[1,:,:])*(tslices[-1]-tslices[-2])/float(tslices[1]-tslices[0])
-    output_ref.append(numpy.median(diff_array))
+    output_ref.append(np.median(diff_array))
   else:
     output_ref.append(0)
   return output_ref
@@ -529,14 +529,14 @@ def ref_array(filelist, formatpars, ny, tslices, verbose):
 
   num_files = len(filelist)
   ntslices = len(tslices)
-  output_array = numpy.zeros((num_files, ny, 2*ntslices+1))
+  output_array = np.zeros((num_files, ny, 2*ntslices+1))
 
   dy = get_nside(formatpars)//ny
   for ifile in range(num_files):
     for iy in range(ny):
       ymin = dy*iy
       ymax = ymin+dy
-      output_array[ifile, iy, :] = numpy.asarray(ref_corr(filelist[ifile], formatpars, [ymin,ymax], tslices, False))
+      output_array[ifile, iy, :] = np.asarray(ref_corr(filelist[ifile], formatpars, [ymin,ymax], tslices, False))
       if verbose:
         print (ifile, iy)
         print (output_array[ifile, iy, :])
@@ -580,12 +580,12 @@ def ref_array_onerow(filelist, formatpars, iy, ny, tslices, verbose):
 
   num_files = len(filelist)
   ntslices = len(tslices)
-  output_array = numpy.zeros((num_files, ny, 2*ntslices+1))
+  output_array = np.zeros((num_files, ny, 2*ntslices+1))
   dy = get_nside(formatpars)//ny
   for ifile in range(num_files):
     ymin = dy*iy
     ymax = ymin+dy
-    output_array[ifile, iy, :] = numpy.asarray(ref_corr(filelist[ifile], formatpars, [ymin,ymax], tslices, False))
+    output_array[ifile, iy, :] = np.asarray(ref_corr(filelist[ifile], formatpars, [ymin,ymax], tslices, False))
     if verbose:
       print (ifile, iy)
       print (output_array[ifile, iy, :])
@@ -640,7 +640,7 @@ def ref_array_block(filelist, formatpars, yrange, tslices, verbose):
 
   num_files = len(filelist)
   ntslices = len(tslices)
-  output_array = numpy.zeros((num_files, 2*ntslices+1))
+  output_array = np.zeros((num_files, 2*ntslices+1))
 
   if len(yrange)<2:
     print ('Error in ref_array_block: yrange =', yrange)
@@ -648,7 +648,7 @@ def ref_array_block(filelist, formatpars, yrange, tslices, verbose):
   for ifile in range(num_files):
     ymin = yrange[0]
     ymax = yrange[1]
-    output_array[ifile, :] = numpy.asarray(ref_corr(filelist[ifile], formatpars, [ymin,ymax], tslices, False))
+    output_array[ifile, :] = np.asarray(ref_corr(filelist[ifile], formatpars, [ymin,ymax], tslices, False))
     if verbose:
       print (ifile)
       print (output_array[ifile, :])
@@ -697,22 +697,22 @@ def pixel_data(filelist, formatpars, xyrange, tslices, maskinfo, verbose):
 
   num_files = len(filelist)
   ntslices = len(tslices)
-  output_array = numpy.zeros((num_files+1, ntslices, xyrange[3]-xyrange[2], xyrange[1]-xyrange[0]))
+  output_array = np.zeros((num_files+1, ntslices, xyrange[3]-xyrange[2], xyrange[1]-xyrange[0]))
 
   for ifile in range(num_files):
     output_array[ifile,:,:,:] = load_segment(filelist[ifile], formatpars, xyrange, tslices, verbose)
 
   # Generate mean CDS image and consider the median
-  mCDS = numpy.mean(output_array[0:num_files,0,:,:], axis=0) - numpy.mean(output_array[0:num_files,-1,:,:], axis=0)
-  mCDS_med = numpy.median(mCDS)
+  mCDS = np.mean(output_array[0:num_files,0,:,:], axis=0) - np.mean(output_array[0:num_files,-1,:,:], axis=0)
+  mCDS_med = np.median(mCDS)
   if do_mask:
     a = (1./mCDS_med)*mCDS
-    goodmap = numpy.where(numpy.logical_and(a>1-cut_offset,a<1+cut_offset),1,0)
+    goodmap = np.where(np.logical_and(a>1-cut_offset,a<1+cut_offset),1,0)
   else:
-    goodmap = numpy.ones_like(mCDS)
+    goodmap = np.ones_like(mCDS)
   for f in range(num_files):
     for t in range(ntslices):
-      goodmap *= numpy.where(output_array[f,t,:,:]>0,1,0)
+      goodmap *= np.where(output_array[f,t,:,:]>0,1,0)
   if verbose:
     print ('Median =', mCDS_med, 'cut_offset =', cut_offset)
     print (goodmap)
@@ -784,8 +784,8 @@ def gen_nl_cube(filelist, formatpars, timeslice, ngrid, Ib, usemode, swi, verbos
     tmin = 1
     nt = tmax = timeslice
 
-  output_array = numpy.zeros((nt, ny, nx))
-  temp_array = numpy.zeros((nfiles, ny, nx))
+  output_array = np.zeros((nt, ny, nx))
+  temp_array = np.zeros((nfiles, ny, nx))
 
   # order of polynomial fit per pixel
   my_order = 5
@@ -813,21 +813,21 @@ def gen_nl_cube(filelist, formatpars, timeslice, ngrid, Ib, usemode, swi, verbos
       valc = val[1,:,:] - val[0,:,:]
       for iy in range(ny):
         for ix in range(nx):
-          temp_array[ifile,iy,ix] = numpy.median(valc[dy*iy:dy*(iy+1), dx*ix:dx*(ix+1)])\
+          temp_array[ifile,iy,ix] = np.median(valc[dy*iy:dy*(iy+1), dx*ix:dx*(ix+1)])\
             - (ref_signal[ifile, iy, t-tmin] - ref_signal[ifile, iy, 0])
-    output_array[t-tmin,:,:] = -numpy.mean(temp_array,axis=0)
+    output_array[t-tmin,:,:] = -np.mean(temp_array,axis=0)
     # <-- note: we flipped the sign so that the signal is positive
 
   if verbose: print ('')
 
   # Make fit and derivatives
-  coefs_array = numpy.zeros((my_order+1, ny, nx))
-  fit_array = numpy.zeros_like(output_array)
-  deriv_array = numpy.zeros_like(output_array)
+  coefs_array = np.zeros((my_order+1, ny, nx))
+  fit_array = np.zeros_like(output_array)
+  deriv_array = np.zeros_like(output_array)
   for iy in range(ny):
     for ix in range(nx):
-      p = numpy.poly1d(numpy.polyfit(numpy.asarray(range(tmin-tref,tmax+1-tref)), output_array[:,iy,ix], my_order))
-      q=numpy.poly1d.deriv(p)
+      p = np.poly1d(np.polyfit(np.asarray(range(tmin-tref,tmax+1-tref)), output_array[:,iy,ix], my_order))
+      q=np.poly1d.deriv(p)
       fit_array[:,iy,ix] = p(range(tmin-tref,tmax+1-tref))
       deriv_array[:,iy,ix] = q(range(tmin-tref,tmax+1-tref))
       coefs_array[:p.order+1,iy,ix] = p.c[::-1]
@@ -890,7 +890,7 @@ def compute_gain_corr(fit_array, deriv_array, Ib, tslices, reset_frame):
 
   true_expepsilon = (fit_array[ind]-fit_array[inb]) / (-2*ta*deriv_array[ina]*(deriv_array[ind]-deriv_array[inb])
     + td*deriv_array[ind]**2 - tb*deriv_array[inb]**2)
-  return numpy.log(true_expepsilon*deriv_array[0]) - Ib*(-4.*ta+3.*tb+3.*td)
+  return np.log(true_expepsilon*deriv_array[0]) - Ib*(-4.*ta+3.*tb+3.*td)
 
 def compute_gain_corr_many(fit_array, deriv_array, Ib, tslices, reset_frame, is_good):
   """
@@ -930,8 +930,8 @@ def compute_gain_corr_many(fit_array, deriv_array, Ib, tslices, reset_frame, is_
 
   """
 
-  out_array = numpy.zeros_like(fit_array[0,:,:])
-  ny = numpy.shape(fit_array)[1]; nx = numpy.shape(fit_array)[2]
+  out_array = np.zeros_like(fit_array[0,:,:])
+  ny = np.shape(fit_array)[1]; nx = np.shape(fit_array)[2]
   for iy in range(ny):
     for ix in range(nx):
       if is_good[iy,ix]>.5:
@@ -1019,8 +1019,8 @@ def compute_xc_corr_many(fit_array, deriv_array, Ib, tslices, reset_frame, is_go
   
   """
 
-  out_array = numpy.zeros_like(fit_array[0,:,:])
-  ny = numpy.shape(fit_array)[1]; nx = numpy.shape(fit_array)[2]
+  out_array = np.zeros_like(fit_array[0,:,:])
+  ny = np.shape(fit_array)[1]; nx = np.shape(fit_array)[2]
   for iy in range(ny):
     for ix in range(nx):
       if is_good[iy,ix]>.5:
@@ -1139,7 +1139,7 @@ def gain_alphabetacorr(graw, CH, CV, signal, frac_dslope, times):
     alpha = (alphaH+alphaV)/2.
     I = signal*g/(times[3]-times[0])/(1-beta*I*(times[3]+times[0]))
     beta = -frac_dslope/I/(times[2]+times[3]-times[0]-times[1])
-    if numpy.fabs(beta)*I*(times[3]+times[0])>0.5: return [] # FAIL!
+    if np.fabs(beta)*I*(times[3]+times[0])>0.5: return [] # FAIL!
 
   return [g, alphaH, alphaV, beta, I]
 
@@ -1264,10 +1264,10 @@ def basic(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verbose
       box1[f,:,:] -= lightref[f,nt+1]
       box2[f,:,:] -= lightref[f,2*nt-1]
       box2Noise[f,:,:] -= darkref[f,2*nt-1]
-  mean1 = numpy.mean(box1, axis=0)
-  mean2 = numpy.mean(box2, axis=0)
-  med1 = numpy.median(mean1)
-  med2 = numpy.median(mean2)
+  mean1 = np.mean(box1, axis=0)
+  mean2 = np.mean(box2, axis=0)
+  med1 = np.median(mean1)
+  med2 = np.median(mean2)
   var1 = 0
   var2 = 0
   corr_mask = region_cube[-1,0,:,:]
@@ -1299,44 +1299,44 @@ def basic(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verbose
         # clipping
         cmin = pyIRC_percentile(temp_box,corr_mask,100*epsilon)
         cmax = pyIRC_percentile(temp_box,corr_mask,100*(1-epsilon))
-        this_mask = numpy.where(numpy.logical_and(temp_box>cmin,temp_box<cmax),1,0) * corr_mask
-        if numpy.sum(this_mask)<1: return [] # FAIL!
+        this_mask = np.where(np.logical_and(temp_box>cmin,temp_box<cmax),1,0) * corr_mask
+        if np.sum(this_mask)<1: return [] # FAIL!
         # mean subtraction
-        mean_of_temp_box = numpy.sum(temp_box*this_mask)/numpy.sum(this_mask)
+        mean_of_temp_box = np.sum(temp_box*this_mask)/np.sum(this_mask)
         if subtr_corr and newMeanSubMethod: temp_box -= mean_of_temp_box
 
         # Correlations in horizontal and vertical directions
-        maskCV = numpy.sum(this_mask[:-1,:]*this_mask[1:,:])
-        maskCH = numpy.sum(this_mask[:,:-1]*this_mask[:,1:])
-        CV = numpy.sum(this_mask[:-1,:]*this_mask[1:,:]*temp_box[:-1,:]*temp_box[1:,:])
-        CH = numpy.sum(this_mask[:,:-1]*this_mask[:,1:]*temp_box[:,:-1]*temp_box[:,1:])
+        maskCV = np.sum(this_mask[:-1,:]*this_mask[1:,:])
+        maskCH = np.sum(this_mask[:,:-1]*this_mask[:,1:])
+        CV = np.sum(this_mask[:-1,:]*this_mask[1:,:]*temp_box[:-1,:]*temp_box[1:,:])
+        CH = np.sum(this_mask[:,:-1]*this_mask[:,1:]*temp_box[:,:-1]*temp_box[:,1:])
         if maskCH<1 or maskCV<1: return []
         CH /= maskCH
         CV /= maskCV
 
         # diagonal directions
         if not full_corr:
-          maskCD1 = numpy.sum(this_mask[:-1,:-1]*this_mask[1:,1:])
-          maskCD2 = numpy.sum(this_mask[:-1,1:]*this_mask[1:,:-1])
-          CD1 = numpy.sum(this_mask[:-1,:-1]*this_mask[1:,1:]*temp_box[:-1,:-1]*temp_box[1:,1:])
-          CD2 = numpy.sum(this_mask[:-1,1:]*this_mask[1:,:-1]*temp_box[:-1,1:]*temp_box[1:,:-1])
+          maskCD1 = np.sum(this_mask[:-1,:-1]*this_mask[1:,1:])
+          maskCD2 = np.sum(this_mask[:-1,1:]*this_mask[1:,:-1])
+          CD1 = np.sum(this_mask[:-1,:-1]*this_mask[1:,1:]*temp_box[:-1,:-1]*temp_box[1:,1:])
+          CD2 = np.sum(this_mask[:-1,1:]*this_mask[1:,:-1]*temp_box[:-1,1:]*temp_box[1:,:-1])
           if maskCD1<1 or maskCD2<1: return []
           CD1 /= maskCD1
           CD2 /= maskCD2
           CD = (CD1+CD2)/2.
 
         if leadtrailSub:
-          maskCVx1 = numpy.sum(this_mask[:-1,:-4]*this_mask[1:,4:])
-          maskCHx1 = numpy.sum(this_mask[:,:-5]*this_mask[:,5:])
-          CVx1 = numpy.sum(this_mask[:-1,:-4]*this_mask[1:,4:]*temp_box[:-1,:-4]*temp_box[1:,4:])
-          CHx1 = numpy.sum(this_mask[:,:-5]*this_mask[:,5:]*temp_box[:,:-5]*temp_box[:,5:])
+          maskCVx1 = np.sum(this_mask[:-1,:-4]*this_mask[1:,4:])
+          maskCHx1 = np.sum(this_mask[:,:-5]*this_mask[:,5:])
+          CVx1 = np.sum(this_mask[:-1,:-4]*this_mask[1:,4:]*temp_box[:-1,:-4]*temp_box[1:,4:])
+          CHx1 = np.sum(this_mask[:,:-5]*this_mask[:,5:]*temp_box[:,:-5]*temp_box[:,5:])
           if maskCHx1<1 or maskCVx1<1: return []
           CHx1 /= maskCHx1
           CVx1 /= maskCVx1
-          maskCVx2 = numpy.sum(this_mask[:-1,4:]*this_mask[1:,:-4])
-          maskCHx2 = numpy.sum(this_mask[:,:-3]*this_mask[:,3:])
-          CVx2 = numpy.sum(this_mask[:-1,4:]*this_mask[1:,:-4]*temp_box[:-1,4:]*temp_box[1:,:-4])
-          CHx2 = numpy.sum(this_mask[:,:-3]*this_mask[:,3:]*temp_box[:,:-3]*temp_box[:,3:])
+          maskCVx2 = np.sum(this_mask[:-1,4:]*this_mask[1:,:-4])
+          maskCHx2 = np.sum(this_mask[:,:-3]*this_mask[:,3:])
+          CVx2 = np.sum(this_mask[:-1,4:]*this_mask[1:,:-4]*temp_box[:-1,4:]*temp_box[1:,:-4])
+          CHx2 = np.sum(this_mask[:,:-3]*this_mask[:,3:]*temp_box[:,:-3]*temp_box[:,3:])
           if maskCHx2<1 or maskCVx2<1: return []
           CHx2 /= maskCHx2
           CVx2 /= maskCVx2
@@ -1345,14 +1345,14 @@ def basic(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verbose
           #
           # correction of the diagonal directions
           if not full_corr:
-            maskCDx1 = numpy.sum(this_mask[:-1,:-5]*this_mask[1:,5:])
-            maskCDx2 = numpy.sum(this_mask[:-1,:-3]*this_mask[1:,3:])
-            maskCDx3 = numpy.sum(this_mask[1:,:-5]*this_mask[:-1,5:])
-            maskCDx4 = numpy.sum(this_mask[1:,:-3]*this_mask[:-1,3:])
-            CDx1 = numpy.sum(this_mask[:-1,:-5]*this_mask[1:,5:]*temp_box[:-1,:-5]*temp_box[1:,5:])
-            CDx2 = numpy.sum(this_mask[:-1,:-3]*this_mask[1:,3:]*temp_box[:-1,:-3]*temp_box[1:,3:])
-            CDx3 = numpy.sum(this_mask[1:,:-5]*this_mask[:-1,5:]*temp_box[1:,:-5]*temp_box[1:,5:])
-            CDx4 = numpy.sum(this_mask[1:,:-3]*this_mask[:-1,3:]*temp_box[1:,:-3]*temp_box[1:,3:])
+            maskCDx1 = np.sum(this_mask[:-1,:-5]*this_mask[1:,5:])
+            maskCDx2 = np.sum(this_mask[:-1,:-3]*this_mask[1:,3:])
+            maskCDx3 = np.sum(this_mask[1:,:-5]*this_mask[:-1,5:])
+            maskCDx4 = np.sum(this_mask[1:,:-3]*this_mask[:-1,3:])
+            CDx1 = np.sum(this_mask[:-1,:-5]*this_mask[1:,5:]*temp_box[:-1,:-5]*temp_box[1:,5:])
+            CDx2 = np.sum(this_mask[:-1,:-3]*this_mask[1:,3:]*temp_box[:-1,:-3]*temp_box[1:,3:])
+            CDx3 = np.sum(this_mask[1:,:-5]*this_mask[:-1,5:]*temp_box[1:,:-5]*temp_box[1:,5:])
+            CDx4 = np.sum(this_mask[1:,:-3]*this_mask[:-1,3:]*temp_box[1:,:-3]*temp_box[1:,3:])
             if maskCDx1<1 or maskCDx2<1 or maskCDx3<1 or maskCDx4<1: return []
             CDx1 /= maskCDx1
             CDx2 /= maskCDx2
@@ -1371,7 +1371,7 @@ def basic(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verbose
 
         if verbose:
           print ('pos =', if1, if2, 'iteration', icorr, 'cmin,cmax =', cmin, cmax)
-          print ('Mask size', numpy.sum(this_mask), 'correlations =', maskCH, maskCV, 'data:', CH, CV)
+          print ('Mask size', np.sum(this_mask), 'correlations =', maskCH, maskCV, 'data:', CH, CV)
 
         temp_box = box2Noise[if1,:,:] - box2Noise[if2,:,:]
         # end nested for loop
@@ -1379,14 +1379,14 @@ def basic(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verbose
   # Normalize covariances. Note that taking the difference of 2 frames doubled the covariance
   # matrix, so we have introduced cov_clip_corr
   xi = scipy.stats.norm.ppf(1-epsilon)
-  cov_clip_corr = (1. - numpy.sqrt(2./numpy.pi)*xi*numpy.exp(-xi*xi/2.)/(1.-2.*epsilon) )**2
+  cov_clip_corr = (1. - np.sqrt(2./np.pi)*xi*np.exp(-xi*xi/2.)/(1.-2.*epsilon) )**2
   tCH /= num_files*(num_files-1)*cov_clip_corr
   tCV /= num_files*(num_files-1)*cov_clip_corr
   if not full_corr: tCD /= num_files*(num_files-1)*cov_clip_corr
 
   # if we don't need full correlations, exit now
   if not full_corr:
-    return [numpy.sum(this_mask), med2, var2, tCH, tCV, tCD]
+    return [np.sum(this_mask), med2, var2, tCH, tCV, tCD]
 
   # Curvature information (for 2nd order NL coefficient)
   if (tslices[-1]!=tslices[-2]):
@@ -1409,10 +1409,10 @@ def basic(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verbose
       c1max = pyIRC_percentile(box1R, corr_mask, 100*(1-epsilon))
       cDmin = pyIRC_percentile(boxDR, corr_mask, 100*epsilon)
       cDmax = pyIRC_percentile(boxDR, corr_mask, 100*(1-epsilon))
-      this_file_mask = numpy.where(numpy.logical_and(box1R>c1min, numpy.logical_and(box1R<c1max,
-        numpy.logical_and(boxDR>cDmin, boxDR<cDmax))), corr_mask, 0)
-      fac0 += numpy.sum(this_file_mask*boxDR)
-      fac1 += numpy.sum(this_file_mask*box1R)
+      this_file_mask = np.where(np.logical_and(box1R>c1min, np.logical_and(box1R<c1max,
+        np.logical_and(boxDR>cDmin, boxDR<cDmax))), corr_mask, 0)
+      fac0 += np.sum(this_file_mask*boxDR)
+      fac1 += np.sum(this_file_mask*box1R)
     if fac1<.5: return [] # FAIL!
     frac_dslope = fac0/fac1/((tslices[-1]-tslices[-2])/float(tslices[1]-tslices[0]))
   else:
@@ -1428,14 +1428,14 @@ def basic(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verbose
   # Get alpha-corrected gains
   out = gain_alphacorr(gain_raw, tCH, tCV, med2)
   if tslices[1]>=tslices[-1] and len(out)<1:
-    return [numpy.sum(this_mask), gain_raw, gain_raw, gain_raw, 0., 0., 0., med2/gain_raw/(tslices[1]-tslices[0]), 0., tCH, tCV]
+    return [np.sum(this_mask), gain_raw, gain_raw, gain_raw, 0., 0., 0., med2/gain_raw/(tslices[1]-tslices[0]), 0., tCH, tCV]
   if len(out)<1: return [] # FAIL!
   gain_acorr = out[0]
   aH = out[1]
   aV = out[2]
 
   if tslices[1]>=tslices[-1]:
-    return [numpy.sum(this_mask), gain_raw, gain_acorr, gain_acorr, aH, aV, 0., med2/gain_acorr/(tslices[1]-tslices[0]), 0., tCH, tCV]
+    return [np.sum(this_mask), gain_raw, gain_acorr, gain_acorr, aH, aV, 0., med2/gain_acorr/(tslices[1]-tslices[0]), 0., tCH, tCV]
 
   out = gain_alphabetacorr(gain_raw, tCH, tCV, med2, frac_dslope, [t-treset for t in tslices])
   if len(out)<1: return [] # FAIL!
@@ -1445,7 +1445,7 @@ def basic(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verbose
   beta = out[3]
   I = out[4]
 
-  return [numpy.sum(this_mask), gain_raw, gain_acorr, gain_abcorr, aH, aV, beta, I, 0., tCH, tCV]
+  return [np.sum(this_mask), gain_raw, gain_acorr, gain_abcorr, aH, aV, beta, I, 0., tCH, tCV]
 
 def corr_5x5(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verbose):
   """
@@ -1545,17 +1545,17 @@ def corr_5x5(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verb
       box1[f,:,:] -= lightref[f,nt+1]
       box2[f,:,:] -= lightref[f,2*nt-1]
       box2Noise[f,:,:] -= darkref[f,2*nt-1]
-  mean1 = numpy.mean(box1, axis=0)
-  mean2 = numpy.mean(box2, axis=0)
-  med1 = numpy.median(mean1)
-  med2 = numpy.median(mean2)
-  med21 = numpy.median(mean2-mean1)
+  mean1 = np.mean(box1, axis=0)
+  mean2 = np.mean(box2, axis=0)
+  med1 = np.median(mean1)
+  med2 = np.median(mean2)
+  med21 = np.median(mean2-mean1)
   var1 = 0
   var2 = 0
   corr_mask = region_cube[-1,0,:,:]
 
-  C_shift_mean = numpy.zeros((dy,dx))
-  tC_all = numpy.zeros((dy,dx))
+  C_shift_mean = np.zeros((dy,dx))
+  tC_all = np.zeros((dy,dx))
 
   for if1 in range(1,num_files):
     for if2 in range(if1):
@@ -1584,26 +1584,26 @@ def corr_5x5(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verb
         # clipping
         cmin = pyIRC_percentile(temp_box,corr_mask,100*epsilon)
         cmax = pyIRC_percentile(temp_box,corr_mask,100*(1-epsilon))
-        this_mask = numpy.where(numpy.logical_and(temp_box>cmin,temp_box<cmax),1,0) * corr_mask
-        if numpy.sum(this_mask)<1: return [] # FAIL!
+        this_mask = np.where(np.logical_and(temp_box>cmin,temp_box<cmax),1,0) * corr_mask
+        if np.sum(this_mask)<1: return [] # FAIL!
         # mean subtraction
-        mean_of_temp_box = numpy.sum(temp_box*this_mask)/numpy.sum(this_mask)
+        mean_of_temp_box = np.sum(temp_box*this_mask)/np.sum(this_mask)
         if subtr_corr and newMeanSubMethod: temp_box -= mean_of_temp_box
 
         # Correlations in all directions
         #masktmp = correlate2d(this_mask, this_mask,mode='same')
         #C_all = correlate2d(this_mask*temp_box, this_mask*temp_box, mode='same')
         dy2 = dy//2; dx2 = dx//2
-        masktmp = fftconvolve(this_mask, numpy.flip(this_mask),mode='full')[dy2:-dy2+1,dx2:-dx2+1]
-        C_all = fftconvolve(this_mask*temp_box, numpy.flip(this_mask*temp_box), mode='full')[dy2:-dy2+1,dx2:-dx2+1]
+        masktmp = fftconvolve(this_mask, np.flip(this_mask),mode='full')[dy2:-dy2+1,dx2:-dx2+1]
+        C_all = fftconvolve(this_mask*temp_box, np.flip(this_mask*temp_box), mode='full')[dy2:-dy2+1,dx2:-dx2+1]
 
-        if numpy.any(masktmp<1): return []
+        if np.any(masktmp<1): return []
 
         C_all /= masktmp
 
         if leadtrailSub:
-          C_pos_shift = numpy.zeros_like(C_all)
-          C_neg_shift = numpy.zeros_like(C_all)
+          C_pos_shift = np.zeros_like(C_all)
+          C_neg_shift = np.zeros_like(C_all)
 
           C_pos_shift[:,:-8]=C_all[:,8:] #values of the correlation matrix 8 columns to the right
           C_neg_shift[:,8:]=C_all[:,:-8] #values of the correlation matrix 8 columns to the left
@@ -1612,7 +1612,7 @@ def corr_5x5(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verb
              the 8 columns at the left edge just take the positive shift values,
              and in the middle the mean of the two shifts is computed:
           """
-          C_shift_mean[:, 8:-8] = numpy.mean([C_pos_shift[:, 8:-8], C_neg_shift[:, 8:-8]], axis=0)
+          C_shift_mean[:, 8:-8] = np.mean([C_pos_shift[:, 8:-8], C_neg_shift[:, 8:-8]], axis=0)
           C_shift_mean[:, :8] = C_pos_shift[:, :8]
           C_shift_mean[:, -8:] = C_neg_shift[:, -8:]
 
@@ -1627,7 +1627,7 @@ def corr_5x5(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verb
         if verbose:
           print ('pos =', if1, if2, 'iteration', icorr, 'cmin,cmax =', cmin, cmax)
           # Below needs to be adjusted
-          #print ('Mask size', numpy.sum(this_mask), 'correlations =', maskCH, maskCV, 'data:', CH, CV)
+          #print ('Mask size', np.sum(this_mask), 'correlations =', maskCH, maskCV, 'data:', CH, CV)
 
         temp_box = box2Noise[if1,:,:] - box2Noise[if2,:,:]
         # end nested for loop
@@ -1636,7 +1636,7 @@ def corr_5x5(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verb
   # Normalize covariances. Note that taking the difference of 2 frames doubled the covariance
   # matrix, so we have introduced cov_clip_corr
   xi = scipy.stats.norm.ppf(1-epsilon)
-  cov_clip_corr = (1. - numpy.sqrt(2./numpy.pi)*xi*numpy.exp(-xi*xi/2.)/(1.-2.*epsilon) )**2
+  cov_clip_corr = (1. - np.sqrt(2./np.pi)*xi*np.exp(-xi*xi/2.)/(1.-2.*epsilon) )**2
   tC_all /= num_files*(num_files-1)*cov_clip_corr
 
   # extract 5x5 matrix in the center of tC_all here:
@@ -1655,7 +1655,7 @@ def corr_5x5(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verb
   if verbose: print('tCH, tCV: ', decenter_tC_all[0,1], decenter_tC_all[1,0])
 
   # Return the correlations
-  return [numpy.sum(this_mask), med21, var1, var2, tC_all_5x5]
+  return [np.sum(this_mask), med21, var1, var2, tC_all_5x5]
 
 def corrstats(lightfiles, darkfiles, formatpars, box, tslices, sensitivity_spread_cut, ctrl_pars):
   """
@@ -1712,7 +1712,7 @@ def corrstats(lightfiles, darkfiles, formatpars, box, tslices, sensitivity_sprea
 
   tmin = tslices[0]; tmax = tslices[1]; nt = tmax-tmin
   # build cube of good pixels, medians, variances, correlations
-  data = numpy.zeros((nt,nt,6))
+  data = np.zeros((nt,nt,6))
   # and get mask (last 'time' slice) -- only thing we are extracting from region_cube_X
   region_cube_X = pixel_data(lightfiles, formatpars, box[:4], [tmin,tmax-1,tmax-1,tmax-1], [sensitivity_spread_cut, True], False)
 
@@ -1734,7 +1734,7 @@ def corrstats(lightfiles, darkfiles, formatpars, box, tslices, sensitivity_sprea
         region_cube[-1,:,:,:] = region_cube_X[-1,:,:,:]
         dark_cube[-1,:,:,:] = region_cube_X[-1,:,:,:]
         B = basic(region_cube, dark_cube, tarray, lightref, darkref, ctrl_pars2, False)
-        if len(B)==6: data[ti,tj,:] = numpy.asarray(B)
+        if len(B)==6: data[ti,tj,:] = np.asarray(B)
         # print (t1, t2, data[ti,tj,:], len(B))
 
   return data
@@ -1836,7 +1836,7 @@ def polychar(lightfiles, darkfiles, formatpars, box, tslices, sensitivity_spread
   if corrstats_data is None:
     data = corrstats(lightfiles, darkfiles, formatpars, box, tslices+[1], sensitivity_spread_cut, ctrl_pars)
   else:
-    data = numpy.copy(corrstats_data)
+    data = np.copy(corrstats_data)
 
   # check if this is good
   nt = tslices[1]-tslices[0]
@@ -1851,22 +1851,22 @@ def polychar(lightfiles, darkfiles, formatpars, box, tslices, sensitivity_spread
     applyCorr = True
     typeCorr = addInfo[0]
     ipnl = addInfo[1]
-    sBFE = numpy.shape(ipnl)[0]//2
+    sBFE = np.shape(ipnl)[0]//2
 
   # Fit of differences as a function of slice number
   # slope = -2*beta*I^2/g
   # intercept = (I - beta I^2)/g
   npts = tslices[1]-tslices[0]-1
-  diff_frames = numpy.zeros((npts))
+  diff_frames = np.zeros((npts))
   for j in range(npts):
     diff_frames[j] = data[j,j+1,1] # median from frame tslices[0]+j -> tslices[0]+j+1
-  slopemed, icpt = numpy.linalg.lstsq(numpy.vstack([numpy.array(range(npts)) + tslices[0]-ctrl_pars.reset_frame,
-                   numpy.ones(npts)]).T, diff_frames, rcond=-1)[0]
+  slopemed, icpt = np.linalg.lstsq(np.vstack([np.array(range(npts)) + tslices[0]-ctrl_pars.reset_frame,
+                   np.ones(npts)]).T, diff_frames, rcond=-1)[0]
   # If using 'allorder', let's subtract out the higher-order terms:
   if hasattr(ctrl_pars,use_allorder) and ctrl_pars.use_allorder:
-    xr = numpy.array(range(npts)) + tslices[0]-ctrl_pars.reset_frame
+    xr = np.array(range(npts)) + tslices[0]-ctrl_pars.reset_frame
     i=100; err=10;
-    etarget = 1e-9*numpy.abs(icpt)
+    etarget = 1e-9*np.abs(icpt)
     while i>=0 and err>etarget:
       I__g = icpt - 0.5*slopemed
       diff_frames_reduced = diff_frames.copy()
@@ -1874,8 +1874,8 @@ def polychar(lightfiles, darkfiles, formatpars, box, tslices, sensitivity_spread
       slopemed_old = slopemed
       for j in range(3, swi.p+1):
         diff_frames_reduced -= addInfo[2][j-2]*((xr+1)**j - xr**j) * (icpt-slopemed*.5)**j
-      slopemed, icpt = numpy.linalg.lstsq(numpy.vstack([xr, numpy.ones(npts)]).T, diff_frames_reduced, rcond=-1)[0]
-      err = numpy.sqrt( (icpt-icpt_old)**2 + (slopemed-slopemed_old)**2 )
+      slopemed, icpt = np.linalg.lstsq(np.vstack([xr, np.ones(npts)]).T, diff_frames_reduced, rcond=-1)[0]
+      err = np.sqrt( (icpt-icpt_old)**2 + (slopemed-slopemed_old)**2 )
       if i==0:
         print ('higher order loop failed to converge {:12.5E} vs {:12.5E} (target)', err, etarget)
         return []
@@ -1937,7 +1937,7 @@ def polychar(lightfiles, darkfiles, formatpars, box, tslices, sensitivity_spread
       # apply corrections from ftsolve
       if ctrl_pars.fullnl and typeCorr.lower() == 'bfe':
         beta_cm = beta
-        if ctrl_pars.use_allorder: beta_cm = -addInfo[2]/g**numpy.linspace(1,swi.p-1,num=swi.p-1)
+        if ctrl_pars.use_allorder: beta_cm = -addInfo[2]/g**np.linspace(1,swi.p-1,num=swi.p-1)
         if Test_SubBeta: beta_cm = beta
         t0 = tslices[0]-ctrl_pars.reset_frame
         CF_BigStep = solve_corr_many(ipnl, 21, I, g, beta_cm, 0., [t0, t0+tslices[3], t0, t0+tslices[3], npts2],
@@ -1961,8 +1961,8 @@ def polychar(lightfiles, darkfiles, formatpars, box, tslices, sensitivity_spread
     alphaV = (CV - CVcorr - 2.*alphaH*alphaD*factor_raw)/factor
     alphaD = ( (CD - CDcorr)/factor_raw - alphaH*alphaV) / (1.-4.*alpha-4.*alphaD)
     alpha = (alphaH+alphaV)/2.
-    da = numpy.abs(alphaH_old-alphaH) + numpy.abs(alphaV_old-alphaV) + numpy.abs(alphaD_old-alphaD)
-    dg = numpy.abs(g_old-g)
+    da = np.abs(alphaH_old-alphaH) + np.abs(alphaV_old-alphaV) + np.abs(alphaD_old-alphaD)
+    dg = np.abs(g_old-g)
     iCycle+=1
     if iCycle<nCycle-2 and da<1e-8 and dg<1e-8: iCycle=nCycle-2 # fast exit from loop
 
@@ -2048,10 +2048,10 @@ def bfe(region_cube, tslices, basicinfo, ctrl_pars_bfe, swi, verbose):
   if hasattr(ctrl_pars_bfe,'vis'):
     if ctrl_pars_bfe.vis:
       hasvis = True
-      normPhi = numpy.sum(ctrl_pars_bfe.Phi) # this is omega/(1+omega)
+      normPhi = np.sum(ctrl_pars_bfe.Phi) # this is omega/(1+omega)
       omega = normPhi / (1-normPhi)
-      p2 = numpy.zeros_like(ctrl_pars_bfe.Phi)
-      if numpy.abs(normPhi)>1e-49: p2 = ctrl_pars_bfe.Phi / normPhi # this prevents an exception if omega=0
+      p2 = np.zeros_like(ctrl_pars_bfe.Phi)
+      if np.abs(normPhi)>1e-49: p2 = ctrl_pars_bfe.Phi / normPhi # this prevents an exception if omega=0
       p2 = pad_to_N(p2,N) # still centered
 
   # BFE kernel size:
@@ -2063,7 +2063,7 @@ def bfe(region_cube, tslices, basicinfo, ctrl_pars_bfe, swi, verbose):
 
   # replace beta with a scalar value if necessary
   # note beta[0] is now 2nd order coef (in DN^-1) is to be converted to beta (in e^-1) and has opposite sign
-  if ctrl_pars_bfe.fullnl and ctrl_pars_bfe.use_allorder: beta = -beta/gain**numpy.linspace(1,swi.p-1,num=swi.p-1)
+  if ctrl_pars_bfe.fullnl and ctrl_pars_bfe.use_allorder: beta = -beta/gain**np.linspace(1,swi.p-1,num=swi.p-1)
   if ctrl_pars_bfe.fullnl and ctrl_pars_bfe.use_allorder and Test_SubBeta: beta = beta[0]
 
   # Baseline subtraction -- requires bigger box
@@ -2078,7 +2078,7 @@ def bfe(region_cube, tslices, basicinfo, ctrl_pars_bfe, swi, verbose):
   epsilon = .01
   if hasattr(ctrl_pars_bfe,'epsilon'): epsilon = ctrl_pars_bfe.epsilon
   xi = scipy.stats.norm.ppf(1-epsilon)
-  cov_clip_corr = (1. - numpy.sqrt(2./numpy.pi)*xi*numpy.exp(-xi*xi/2.)/(1.-2.*epsilon) )**2
+  cov_clip_corr = (1. - np.sqrt(2./np.pi)*xi*np.exp(-xi*xi/2.)/(1.-2.*epsilon) )**2
 
   # Build the two slices to correlate
   box1 = region_cube[0:num_files,0,:,:] - region_cube[0:num_files,1,:,:]
@@ -2086,8 +2086,8 @@ def bfe(region_cube, tslices, basicinfo, ctrl_pars_bfe, swi, verbose):
   corr_mask = region_cube[-1,0,:,:]
 
   # setup for BFE kernel
-  numBFE = numpy.zeros((fsBFE,fsBFE))
-  denBFE = numpy.zeros((fsBFE,fsBFE))
+  numBFE = np.zeros((fsBFE,fsBFE))
+  denBFE = np.zeros((fsBFE,fsBFE))
 
   # Loop over the flat pairs we are going to use
   for if1 in range(1,num_files):
@@ -2099,10 +2099,10 @@ def bfe(region_cube, tslices, basicinfo, ctrl_pars_bfe, swi, verbose):
       ab_max = pyIRC_percentile(slice_ab, corr_mask, 100*(1-epsilon))
       cd_min = pyIRC_percentile(slice_cd, corr_mask, 100*epsilon)
       cd_max = pyIRC_percentile(slice_cd, corr_mask, 100*(1-epsilon))
-      this_file_mask_ab = numpy.where(numpy.logical_and(slice_ab>ab_min, slice_ab<ab_max), corr_mask, 0)
-      this_file_mask_cd = numpy.where(numpy.logical_and(slice_cd>cd_min, slice_cd<cd_max), corr_mask, 0)
+      this_file_mask_ab = np.where(np.logical_and(slice_ab>ab_min, slice_ab<ab_max), corr_mask, 0)
+      this_file_mask_cd = np.where(np.logical_and(slice_cd>cd_min, slice_cd<cd_max), corr_mask, 0)
       if verbose:
-        print (if1, if2, slice_ab.shape, slice_cd.shape, numpy.sum(this_file_mask_ab), numpy.sum(this_file_mask_cd))
+        print (if1, if2, slice_ab.shape, slice_cd.shape, np.sum(this_file_mask_ab), np.sum(this_file_mask_cd))
 
       # Mean subtraction
       slice_ab -= pyIRC_mean(slice_ab, this_file_mask_ab)
@@ -2133,8 +2133,8 @@ def bfe(region_cube, tslices, basicinfo, ctrl_pars_bfe, swi, verbose):
           cdmaxY = abmaxY + j - sBFE
 
           # Add up contributions to the correlation function
-          denBFE[j,i] += numpy.sum(this_file_mask_ab[abminY:abmaxY,abminX:abmaxX]*this_file_mask_cd[cdminY:cdmaxY,cdminX:cdmaxX])
-          numBFE[j,i] += numpy.sum(slice_ab[abminY:abmaxY,abminX:abmaxX]*slice_cd[cdminY:cdmaxY,cdminX:cdmaxX])/2.
+          denBFE[j,i] += np.sum(this_file_mask_ab[abminY:abmaxY,abminX:abmaxX]*this_file_mask_cd[cdminY:cdmaxY,cdminX:cdmaxX])
+          numBFE[j,i] += np.sum(slice_ab[abminY:abmaxY,abminX:abmaxX]*slice_cd[cdminY:cdmaxY,cdminX:cdmaxX])/2.
           # division by 2 since differencing two images doubles the answer
 
   BFEK = numBFE/(denBFE+1e-99)
@@ -2143,7 +2143,7 @@ def bfe(region_cube, tslices, basicinfo, ctrl_pars_bfe, swi, verbose):
   # Baseline subtraction
   if BSub:
     for j in range(fsBFE):
-      rowBL = ( numpy.mean(BFEK[j,0:pad]) + numpy.mean(BFEK[j,-pad:]) )/2.
+      rowBL = ( np.mean(BFEK[j,0:pad]) + np.mean(BFEK[j,-pad:]) )/2.
       BFEK[j,:] -= rowBL
 
   # Implement cr_converge.
@@ -2154,7 +2154,7 @@ def bfe(region_cube, tslices, basicinfo, ctrl_pars_bfe, swi, verbose):
     tol = 1.e-11 #Pick a tolerance below which the two Crs are considered equal
     fsBFE_out = 2*sBFE_out+1
     observed_Cr = BFEK[sBFE-sBFE_out:sBFE+sBFE_out+1, sBFE-sBFE_out:sBFE+sBFE_out+1]
-    BFEK_model = numpy.zeros((fsBFE_out,fsBFE_out))+1e-15
+    BFEK_model = np.zeros((fsBFE_out,fsBFE_out))+1e-15
     element_diff = 10
     iters = 0
     while element_diff > tol and iters<=100:
@@ -2165,17 +2165,17 @@ def bfe(region_cube, tslices, basicinfo, ctrl_pars_bfe, swi, verbose):
         else:
           theory_Cr = solve_corr(BFEK_model,N,I,gain,beta,sigma_a,[t-treset for t in tslices],avals,avals_nl)\
             *((gain**2)/(I**2*(tslices[1]-tslices[0])*(tslices[-1]-tslices[-2])))
-        if numpy.isnan(theory_Cr).any():
+        if np.isnan(theory_Cr).any():
             warnings.warn('BFE loop diverged, generated NaN')
-            return numpy.zeros((fsBFE_out,fsBFE_out)) + numpy.nan
+            return np.zeros((fsBFE_out,fsBFE_out)) + np.nan
         difference = theory_Cr - observed_Cr
-        element_diff = numpy.amax(abs(difference))
+        element_diff = np.amax(abs(difference))
         BFEK_model -= difference[::-1,::-1]
         iters += 1
         if verbose: print(iter, BFEK_model)
         if iters>99:
            warnings.warn("WARNING: NL loop has iterated 100 times")
-           return numpy.zeros((fsBFE_out,fsBFE_out)) + numpy.nan
+           return np.zeros((fsBFE_out,fsBFE_out)) + np.nan
     return BFEK_model
 
   else:
@@ -2230,15 +2230,15 @@ def hotpix(darkfiles, formatpars, tslices, pars, verbose):
   # Build array for the dark cube
   ndarks = len(darkfiles)
   N = get_nside(formatpars)
-  cube = numpy.zeros((ndarks,N,N))
+  cube = np.zeros((ndarks,N,N))
   for f in range(ndarks):
     CDS = load_segment(darkfiles[f], formatpars, [0,N,0,N], [1,tslices[-1]], False)
     cube[f,:,:] = CDS[0,:,:] - CDS[1,:,:]
 
   # Extract information on the pixels
-  this_hot = numpy.zeros((N,N))
-  ave_cube = numpy.mean(cube, axis=0)
-  d_cube = numpy.max(cube, axis=0) - numpy.min(cube, axis=0)
+  this_hot = np.zeros((N,N))
+  ave_cube = np.mean(cube, axis=0)
+  d_cube = np.max(cube, axis=0) - np.min(cube, axis=0)
   if verbose:
     print ('time slices for hot pixel analysis ->', tslices)
     print (ave_cube)
@@ -2246,13 +2246,13 @@ def hotpix(darkfiles, formatpars, tslices, pars, verbose):
     print (d_cube)
     print ('->', d_cube.shape)
 
-  this_hot = numpy.where(numpy.logical_and(ave_cube>=pars[0], ave_cube<=pars[1]), 1, 0)
+  this_hot = np.where(np.logical_and(ave_cube>=pars[0], ave_cube<=pars[1]), 1, 0)
 
   # Isolation cut
-  if verbose: print ('Start with', numpy.sum(this_hot), 'pixels before isolation cut')
+  if verbose: print ('Start with', np.sum(this_hot), 'pixels before isolation cut')
   if pars[3]>0:
     C = 2
-    M = numpy.ones((2*C+1,2*C+1))
+    M = np.ones((2*C+1,2*C+1))
     M[C,C]=0
     isolation_mask = scipy.ndimage.maximum_filter(ave_cube, footprint=M, mode='constant', cval=0)
     # Also avoid pixels that border on reference pixels
@@ -2260,18 +2260,18 @@ def hotpix(darkfiles, formatpars, tslices, pars, verbose):
     this_hot[-(4+C):,:] = 0
     this_hot[:,:4+C] = 0
     this_hot[:,-(4+C):] = 0
-    this_hot *= numpy.where(isolation_mask<=pars[3]*ave_cube, 1, 0)
+    this_hot *= np.where(isolation_mask<=pars[3]*ave_cube, 1, 0)
 
-  if verbose: print ('Start with', numpy.sum(this_hot), 'pixels')
+  if verbose: print ('Start with', np.sum(this_hot), 'pixels')
   for t in tslices[1:]:
     for f in range(ndarks):
       CDS = load_segment(darkfiles[f], formatpars, [0,N,0,N], [1,t], False)
       cube[f,:,:] = CDS[0,:,:] - CDS[1,:,:]
-    d_cube = numpy.max(cube, axis=0) - numpy.min(cube, axis=0)
-    this_hot *= numpy.where(d_cube<=pars[2]*ave_cube, 1, 0)
-  if verbose: print (numpy.sum(this_hot))
+    d_cube = np.max(cube, axis=0) - np.min(cube, axis=0)
+    this_hot *= np.where(d_cube<=pars[2]*ave_cube, 1, 0)
+  if verbose: print (np.sum(this_hot))
 
-  return numpy.where(this_hot>0)
+  return np.where(this_hot>0)
 
 def hotpix_ipc(y, x, darkfiles, formatpars, tslices, pars, verbose):
   """
@@ -2308,11 +2308,11 @@ def hotpix_ipc(y, x, darkfiles, formatpars, tslices, pars, verbose):
   # Build array for the dark cube
   ndarks = len(darkfiles)
   N = get_nside(formatpars)
-  cube = numpy.zeros((ndarks,N,N))
+  cube = np.zeros((ndarks,N,N))
 
   nt = len(tslices)
   npix = len(x)
-  data = numpy.zeros((npix,nt,10))
+  data = np.zeros((npix,nt,10))
 
   # offset table
   dx = [0, 1, 0, -1, 0, 1, -1, -1, 1]
@@ -2321,11 +2321,11 @@ def hotpix_ipc(y, x, darkfiles, formatpars, tslices, pars, verbose):
   # Perform nonlinearity correction?
   do_nonlin = False
   if len(pars)>=1:
-    if type(pars[0]) is numpy.ndarray:
+    if type(pars[0]) is np.ndarray:
       do_nonlin = True
       m = pars[0]
-      beta_gain = numpy.zeros((N,N))
-      (ny1,nx1) = numpy.shape(m)
+      beta_gain = np.zeros((N,N))
+      (ny1,nx1) = np.shape(m)
       kx1 = N//nx1; ky1 = N//ny1
       for i in range(nx1):
         for j in range(ny1):
@@ -2338,7 +2338,7 @@ def hotpix_ipc(y, x, darkfiles, formatpars, tslices, pars, verbose):
     medbaseline_nonlin = pars[1]
 
   # background mask
-  bkmask = numpy.ones((5,5))
+  bkmask = np.ones((5,5))
   bkmask[1:4,1:4]=0.
   fourmask = False
   if fourmask:
@@ -2358,14 +2358,14 @@ def hotpix_ipc(y, x, darkfiles, formatpars, tslices, pars, verbose):
         if medbaseline_nonlin:
           cube_corr = 2*scipy.ndimage.median_filter(CDS[0,:,:],size=3) - CDS[0,:,:] - CDS[1,:,:]
         cube[f,:,:] = cube[f,:,:]*(1.+beta_gain*cube_corr)
-    medframe = numpy.median(cube, axis=0)
-    if verbose: print ('med', numpy.shape(medframe), jt)
+    medframe = np.median(cube, axis=0)
+    if verbose: print ('med', np.shape(medframe), jt)
     for jpix in range(npix):
       for jpos in range(9):
         x_ = x[jpix] + dx[jpos]
         y_ = y[jpix] + dy[jpos]
         data[jpix,jt,jpos] = medframe[y_,x_]
-      data[jpix,jt,9] = 25./16.*numpy.mean(bkmask*medframe[y[jpix]-2:y[jpix]+3, x[jpix]-2:x[jpix]+3])
+      data[jpix,jt,9] = 25./16.*np.mean(bkmask*medframe[y[jpix]-2:y[jpix]+3, x[jpix]-2:x[jpix]+3])
       if fourmask: data[jpix,jt,9] *= 16./4.
 
   return data
@@ -2408,7 +2408,7 @@ def slidemed_percentile(x,y,p,mrange=[-1,1],niter=64,pivot='pos'):
 
   for k in range(niter):
     m = (m1+m2)/2.
-    if numpy.nanpercentile(y-m*x,p)>0:
+    if np.nanpercentile(y-m*x,p)>0:
       m1=m
     else:
       m2=m
@@ -2433,6 +2433,6 @@ def get_vmin_vmax(mydata, qext):
 
   """
 
-  Q1 = numpy.nanpercentile(mydata,25)
-  Q2 = numpy.nanpercentile(mydata,75)
+  Q1 = np.nanpercentile(mydata,25)
+  Q2 = np.nanpercentile(mydata,75)
   return Q1-(Q2-Q1)*qext, Q2+(Q2-Q1)*qext
