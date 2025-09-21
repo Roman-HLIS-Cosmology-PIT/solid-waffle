@@ -14,9 +14,11 @@ Table of Contents
 
 
 #. `Project Structure <#project-structure>`_
+
+#. `Documentation <#documentation>`_
+
 #. `Files Description <#files-description>`_
 
-   * `ScriptInformation.txt <#scriptinformationtxt>`_
    * `test_run.py <#test_runpy>`_
    * `test_run_vis.py <#test_run_vispy>`_
    * `pyirc.py <#pyircpy>`_
@@ -36,18 +38,19 @@ Project Structure
 
 The repository is organized as follows:
 
+Documentation
+-------------
+
+Some available help on:
+
+* `How to run a solid-waffle characterization script <docs/ScriptInformation.rst>`_.
+
 Files Description
 -----------------
 
-ScriptInformation.txt
-^^^^^^^^^^^^^^^^^^^^^
 
-
-* **Purpose**\ : Reference information on how to build and run a solid-waffle script. 
-* **Details**\ : Includes sections on how to write a configuration file containing the file names to be analyzed, their format, and analysis options. Also describes different available options for formats (e.g., FITS cube with ascending ramps, and a given extension structure with NAXIS values). There are many different analysis options to choose from.
-
-test_run.py
-^^^^^^^^^^^
+src/solid_waffle/correlation_run.py
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
 * **Purpose**\ : Main script to call that takes a config file as an argument and runs the analysis.
@@ -57,45 +60,39 @@ test_run.py
   * Hot pixel identification and calculation of interpixel capacitance (IPC)
   * Summary statistics in superpixels
   * Visualization such as maps of gain, IPC, BFE over superpixels
+  * *If visible light data is supplied as well*: Estimates for charge diffusion covariance and quantum yield, also summarized and visualized in outputs
 
-test_run_vis.py
-^^^^^^^^^^^^^^^
-
-
-* **Purpose**\ : Similar to ``test_run.py`` but designed to handle flats and darks in the visible part of the spectrum.
-* **Key Features**\ :
-
-  * If a flag is turned on, the first step of this script is to run ``test_run.py`` to generate initial processing and results from the infrared data
-  * Estimates for charge diffusion covariance and quantum yield, also summarized and visualized in outputs
-
-pyirc.py
-^^^^^^^^
-
+src/solid_waffle/pyirc.py
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * **Purpose**\ : Main utility script containing many functions to load in data, calculate statistics, and estimate corrections.
 * **Details**\ : Includes functions that will read the data in, compute reference pixel corrections, compute gain, do basic characterization, calculate correlations of neighboring pixels, compute BFE coefficients, and more.
 
-example_config_wfirst_h4rg_18237
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/solid_waffle/ftsolve.py
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-
-* **Purpose**\ : A sample configuration file which is simplified to the basics
-* **Details**\ : This config requires only flat files, dark files, a format code, time frames, and an output location to be specified. ``ScriptInformation.txt`` contains the information necessary to build a more complex config.
+* **Purpose**\ : Routines for modeling Fourier-domain correlations across time (Feudenburg et al. 2020).
 
 Directories Overview
 --------------------
 
-flat_simulator
+sample_configs
 ^^^^^^^^^^^^^^
+
+* **Description**\ : Sample configuration files.
+* **Key Files**\ :
+  * example_config_wfirst_h4rg_18237 : A sample configuration file which is simplified to the basics. This config requires only flat files, dark files, a format code, time frames, and an output location to be specified.
+  * ex_sim_config: Example configuration for the flat simulator. Run with ``python -m solid_waffle.flat_simulator.simulate_flat ex_sim_config``
+
+src/solid_waffle/flat_simulator
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
 * **Description**\ : Scripts and utilities for simulating flat field images.
 * **Key Files**\ :
 
   * simulate_flat.py: Main script to generate a simulated flat field.
-  * ex_sim_config: Example config. Run with ``python simulate_flat.py ex_sim_config``
   * detector_function.py: Some utility functions called by simulate_flat.py
-  * write_config_flatsim.py: Utility script to quickly generate config files that can be used on the commandline or in a bash script.
 
 notebooks
 ^^^^^^^^^
