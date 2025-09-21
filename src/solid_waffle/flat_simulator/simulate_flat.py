@@ -109,6 +109,7 @@ class Simulation():
     wavemode = 'ir' # options are 'ir' or 'vis'; used only for BFE kernel choice
     rngseed = 1000
     noisemode = 'none'
+    noisefile = None
     bfemode = 'true'
     lipcmode = 'false'
     lipc_alpha = [0.01]
@@ -170,6 +171,9 @@ class Simulation():
       if m: rngseed = int(m.group(1))
     
       # Noise
+      m = re.search(r'^NOISE:\s*(\S+)', line)
+      if m:
+        noisemode = m.group(1)
       m = re.search(r'^NOISE:\s*(\S+)\s+(\S+)', line)
       if m:
         noisemode = m.group(1)
@@ -211,7 +215,7 @@ class Simulation():
 
     # Stuff to save
     save_pars = ["formatpars", "tsamp", "substep", "I", "QE", "delta_tsamp", "gain",
-                 "outfile", "wavemode", "rngseed", "noisemode", "bfemode", "lipcmode",
+                 "outfile", "wavemode", "rngseed", "noisemode", "noisefile", "bfemode", "lipcmode",
                  "lipc_alpha", "nlmode", "nlbeta", "nlcoeffs_arr", "reset_frames", "resetlevel",
                  "QY_omega", "QY_cov", "QY_offset", "QY_p2"]
 
@@ -363,7 +367,7 @@ class Simulation():
     # Write simple header, todo: add more thorough comments
     hdr = FITSHDR()
     hdr['GAIN'] = self.pars["gain"]
-    hdr['ILLUMIN'] = I
+    hdr['ILLUMIN'] = self.pars["I"]
     hdr['QE'] = self.pars["QE"]
     hdr['RNGSEED'] = self.pars["rngseed"]
     if (self.pars["lipcmode"]=='true'):

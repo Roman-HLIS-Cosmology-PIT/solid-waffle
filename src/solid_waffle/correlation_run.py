@@ -1617,7 +1617,7 @@ class Config():
     S.set_xlabel(r'$\omega$')
     
     S = F.add_subplot(2,2,2)
-    S.hist(Ie.ravel(),bins=num_bins)
+    S.hist(self.vis_out_data[:,:,self.vis_col["Ie"]].ravel(),bins=num_bins)
     S.set_xlabel(r'$I_e$')
     
     S = F.add_subplot(2,2,3)
