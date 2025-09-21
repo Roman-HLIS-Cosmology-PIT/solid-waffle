@@ -19,18 +19,12 @@ Table of Contents
 
 #. `Files Description <#files-description>`_
 
-   * `test_run.py <#test_runpy>`_
-   * `test_run_vis.py <#test_run_vispy>`_
-   * `pyirc.py <#pyircpy>`_
-   * `example_config_wfirst_h4rg_18237 <#example_config_wfirst_h4rg_18237>`_
-
 #. `Directories Overview <#directories-overview>`_
 
-   * `flat_simulator <#flat_simulator>`_
-   * `notebooks <#notebooks>`_
-
 #. `How to Get Started <#how-to-get-started>`_
+
 #. `Contacts <#contacts>`_
+
 #. `References <#references>`_
 
 Project Structure
@@ -84,11 +78,9 @@ sample_configs
 
   * example_config_wfirst_h4rg_18237: A sample configuration file which is simplified to the basics. This config requires only flat files, dark files, a format code, time frames, and an output location to be specified.
 
-  * config.vis1: An example configuration file for visible light characterization.
+  * config.vis-sim, config.vis1: Example configuration files for visible light characterization.
 
   * ex_sim_config: Example configuration for the flat simulator. Run with ``python -m solid_waffle.flat_simulator.simulate_flat ex_sim_config``
-
-  * config.vis-sim: An example visible light configuration for the flat simulator.
 
 src/solid_waffle/flat_simulator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -109,6 +101,16 @@ notebooks
 * **Key Notebooks**\ :
 
   * plotting_tests.ipynb: Shows some visualizations of outputs.
+
+projects
+^^^^^^^^
+
+* **Description**\ : Other projects related to detector characterization that aren't in the main workflow right now (and aren't part of the installable module).
+* **Key Sub-Folders**\ :
+
+  * crnl_tools: Tools for the "direct method" count-rate non-linearity ground test data.
+
+  * speckle: Tools for speckle fringe data.
 
 How to Get Started
 ------------------
@@ -135,8 +137,14 @@ References
 
 For more detailed background on the concepts and methods used in this project, please refer to:
 
+* Main correlation analysis projects for flats and darks:
 
-* Hirata, C. & Choi, A. (2020). *Brighter-fatter Effect in Near-infrared Detectors. I. Theory of Flat Autocorrelations*. Publications of the Astronomical Society of the Pacific, Volume 132, Issue 1007, id. 014501 `Link to abstract <https://ui.adsabs.harvard.edu/abs/2020PASP..132a4501H/abstract>`_
-* Choi, A. & Hirata, C. (2020). *Brighter-fatter Effect in Near-infrared Detectors. II. Autocorrelation Analysis of H4RG-10 Flats*. Publications of the Astronomical Society of the Pacific, Volume 132, Issue 1007, id. 014502 `Link to abstract <https://ui.adsabs.harvard.edu/abs/2020PASP..132a4502C/abstract>`_
-* Freudenburg, J., Givans, J. et al. (2020). *Brighter-fatter Effect in Near-infrared Detectors—III. Fourier-domain Treatment of Flat Field Correlations and Application to WFIRST*. Publications of the Astronomical Society of the Pacific, Volume 132, Issue 1013, id.074504 `Link to abstract <https://ui.adsabs.harvard.edu/abs/2020PASP..132g4504F/abstract>`_
-* Givans, J. et al. (2022). *Quantum Yield and Charge Diffusion in the Nancy Grace Roman Space Telescope Infrared Detectors*. Publications of the Astronomical Society of the Pacific, Volume 134, Issue 1031, id.014001 `Link to abstract <https://ui.adsabs.harvard.edu/abs/2022PASP..134a4001G/abstract>`_
+  * Hirata, C. & Choi, A. (2020). *Brighter-fatter Effect in Near-infrared Detectors. I. Theory of Flat Autocorrelations*. Publications of the Astronomical Society of the Pacific, Volume 132, Issue 1007, id. 014501 `Link to abstract <https://ui.adsabs.harvard.edu/abs/2020PASP..132a4501H/abstract>`_
+  * Choi, A. & Hirata, C. (2020). *Brighter-fatter Effect in Near-infrared Detectors. II. Autocorrelation Analysis of H4RG-10 Flats*. Publications of the Astronomical Society of the Pacific, Volume 132, Issue 1007, id. 014502 `Link to abstract <https://ui.adsabs.harvard.edu/abs/2020PASP..132a4502C/abstract>`_
+  * Freudenburg, J., Givans, J. et al. (2020). *Brighter-fatter Effect in Near-infrared Detectors—III. Fourier-domain Treatment of Flat Field Correlations and Application to WFIRST*. Publications of the Astronomical Society of the Pacific, Volume 132, Issue 1013, id.074504 `Link to abstract <https://ui.adsabs.harvard.edu/abs/2020PASP..132g4504F/abstract>`_
+  * Givans, J. et al. (2022). *Quantum Yield and Charge Diffusion in the Nancy Grace Roman Space Telescope Infrared Detectors*. Publications of the Astronomical Society of the Pacific, Volume 134, Issue 1031, id.014001 `Link to abstract <https://ui.adsabs.harvard.edu/abs/2022PASP..134a4001G/abstract>`_
+
+* Speckle field analysis projects:
+
+  * Hirata, C. & Merchant, C. (2022). *Pixel Centroid Characterization with Laser Speckle and Application to the Nancy Grace Roman Space Telescope Detector Arrays*. Publications of the Astronomical Society of the Pacific, Volume 134, Issue 1041, id.115001 `Link to abstract <https://ui.adsabs.harvard.edu/abs/2022PASP..134k5001H/abstract>`_
+  * Macbeth, E., Laliotis, K. et al. (2025), in prep.

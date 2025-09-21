@@ -1,0 +1,6 @@
+python sim_mtf.py /Users/christopherhirata/Desktop/AFTA/mtf/sim-paper/config/sim-AP4F.config
+python sim_mtf.py /Users/christopherhirata/Desktop/AFTA/mtf/sim-paper/config/sim-AP5F.config
+python sim_mtf.py /Users/christopherhirata/Desktop/AFTA/mtf/sim-paper/config/sim-AP6F.config
+python sim_mtf.py /Users/christopherhirata/Desktop/AFTA/mtf/sim-paper/config/sim-AP7F.config
+python sim_mtf.py /Users/christopherhirata/Desktop/AFTA/mtf/sim-paper/config/sim-AP8F.config
+python sim_mtf.py /Users/christopherhirata/Desktop/AFTA/mtf/sim-paper/config/sim-AP9F.config
