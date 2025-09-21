@@ -81,8 +81,14 @@ sample_configs
 
 * **Description**\ : Sample configuration files.
 * **Key Files**\ :
-  * example_config_wfirst_h4rg_18237 : A sample configuration file which is simplified to the basics. This config requires only flat files, dark files, a format code, time frames, and an output location to be specified.
+
+  * example_config_wfirst_h4rg_18237: A sample configuration file which is simplified to the basics. This config requires only flat files, dark files, a format code, time frames, and an output location to be specified.
+
+  * config.vis1: An example configuration file for visible light characterization.
+
   * ex_sim_config: Example configuration for the flat simulator. Run with ``python -m solid_waffle.flat_simulator.simulate_flat ex_sim_config``
+
+  * config.vis-sim: An example visible light configuration for the flat simulator.
 
 src/solid_waffle/flat_simulator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -92,6 +98,7 @@ src/solid_waffle/flat_simulator
 * **Key Files**\ :
 
   * simulate_flat.py: Main script to generate a simulated flat field.
+
   * detector_function.py: Some utility functions called by simulate_flat.py
 
 notebooks
