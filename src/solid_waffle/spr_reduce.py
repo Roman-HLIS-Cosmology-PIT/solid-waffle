@@ -17,7 +17,7 @@ import time
     
 thisversion = 5
 
-def run_spr_reduce(arglist):
+def run_spr_reduce(arglist, verbose=False):
     """
     Runs the single pixel reset reduction.
 
@@ -385,4 +385,4 @@ def run_spr_reduce(arglist):
       print('Number of masked pixels = {:d}/{:d}'.format(int(numpy.sum(dmask)), nx*ny))
 
 if __name__ == "__main__":
-    run_spr_reduce(sys.argv)
+    run_spr_reduce(sys.argv, verbose=True)
