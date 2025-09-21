@@ -39,6 +39,8 @@ Some available help on:
 
 * `How to run a solid-waffle characterization script <docs/ScriptInformation.rst>`_.
 
+* `Single pixel reset script <docs/SPR.rst>`_.
+
 Files Description
 -----------------
 
@@ -66,6 +68,14 @@ src/solid_waffle/ftsolve.py
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * **Purpose**\ : Routines for modeling Fourier-domain correlations across time (Feudenburg et al. 2020).
+
+src/solid_waffle/spr_reduce.py
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* **Purpose**\ : Analysis of single pixel reset data.
+* **Key Features**\ : 
+
+  * Extraction of spatially varying IPC maps from single pixel reset data.
 
 Directories Overview
 --------------------
