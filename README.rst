@@ -39,6 +39,8 @@ Some available help on:
 
 * `How to run a solid-waffle characterization script <docs/ScriptInformation.rst>`_.
 
+* `Noise and linearity scripts <docs/noise_linearity.rst>`_.
+
 * `Single pixel reset script <docs/SPR.rst>`_.
 
 Files Description
