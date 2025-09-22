@@ -52,7 +52,9 @@ This could also be written in dictionary form::
       "-cd": 6.0,
       "-rh": 7,
       "-tn": 55
-  })
+      },
+      verbose=True # this is if you want lots of output; otherwise can skip
+  )
 
 (If you want the ``-ro`` option, which doesn't include an argument, you can include ``"-ro": True``.)
 
@@ -150,4 +152,13 @@ where m is the value in the ``M_PINK`` keyword; and n_{ru} is 1/f noise with an 
 The image has shape (2, N, Nw), where N is the size of the SCA (4096 for Roman) and Nw is the channel width (128 for Roman). The [0,:,:] slice is the median reference signal (in DN), and the [1,:,:] is the robust (IQR-based) standard deviation.
 
 Note that the reference output isn't a physical set of pixels so there aren't hot or noisy pixels like there are in the physical SCA. However, in a given read pattern there are commonly "features" that are synchronous with the row stepping and guide window interlacing, so it is important to have a full pixel map.
+
+Linearity script
+================
+
+Calling format
+--------------
+
+Outputs
+-------
 
