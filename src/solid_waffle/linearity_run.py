@@ -29,8 +29,9 @@ def build_linearity_file(infile):
 
     Parameters
     ----------
-    infile : str
+    infile : str or dict
         The JSON configuration file (see Notes for details).
+        If a string, then reads that file; if a dictionary, then takes as the script.
 
     Returns
     -------
@@ -39,9 +40,13 @@ def build_linearity_file(infile):
     """
 
     # get the parameters for this run
-    with open(infile, "r") as file:
-        pars = json.load(file)
-        script = file.read()
+    if isinstance(infile, str):
+        with open(infile, "r") as file:
+            pars = json.load(file)
+            script = file.read()
+    else:
+        pars = infile
+        script = json.dumps(pars)
 
     # get sizes of things
     nside = pyirc.get_nside(pars["RAMPS"][0]["FORMAT"])

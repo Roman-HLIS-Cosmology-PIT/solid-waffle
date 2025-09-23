@@ -159,6 +159,156 @@ Linearity script
 Calling format
 --------------
 
+You may run either the command line version::
+
+  python -m solid_waffle.linearity_run mypar.json
+
+or the from Python version::
+
+  from solid_waffle.linearity_run import build_linearity_file
+
+  build_linearity_file("mypar.json")
+
+You can also directly pass a dictionary to ``build_linearity_file``.
+
+Inputs
+------
+
+The parameters are in a JSON file and should be of the form::
+
+ {
+ "SCA": 6,
+ "RAMPS": [
+ {
+   "FORMAT": 6,
+   "FILE": "/fs/scratch/PCON0003/cond0007/cal/99999999_SCA06_Flat_001.fits",
+   "START": 1,
+   "NRAMP": 50,
+   "TSTART": 2
+ },
+ {
+   "FORMAT": 6,
+   "FILE": "/fs/scratch/PCON0003/cond0007/cal/99999999_SCA06_LoFlat_001.fits",
+   "START": 1,
+   "NRAMP": 30,
+   "TSTART": 2
+ },
+ {
+   "FORMAT": 6,
+   "FILE": "/fs/scratch/PCON0003/cond0007/cal/99999999_SCA06_Noise_001.fits",
+   "START": 1,
+   "NRAMP": 25,
+   "TSTART": 2
+ }
+ ],
+ "DARK": -1,
+ "TFRAME": 3.04,
+ "P_ORDER": 10,
+ "OUTPUT": "/fs/scratch/PCON0003/cond0007/cal/roman_wfi_linearitylegendre_DUMMY20250521_SCA06.asdf",
+ "SIGN": 1,
+ "SLOPECUT": 0.5,
+ "BIAS":
+   {
+     "FILE": "/fs/scratch/PCON0003/cond0007/cal/roman_wfi_dark_DUMMY20250521_SCA06.asdf",
+     "PATH": ["roman", "data"],
+     "SLICE": 1
+   },
+ "NEGATIVEPAD": 500
+ }
+
+The fields include:
+
+* ``SCA`` : The SCA number (this is a pass-through to the ASDF file).
+
+* ``RAMPS`` : This is a list of the ramps that go into the linearity file. Each item contains:
+
+  * ``FORMAT`` : The format (see the `options <ScriptInformation.rst#format>`_)
+
+  * ``FILE`` : The file name convention for those ramps ("_001.fits" will be replaced with "_002.fits", etc. for subsequent files).
+
+  * ``START`` : The starting file number.
+
+  * ``NRAMP`` : The number of ramps.
+
+  * ``TSTART`` : The time stamp to start with (usually 2 if you want to ignore the first stamp).
+
+  Note that the dark ramp is included as well.
+
+* ``DARK`` : The number of the ramp that is the dark. This is Python-indexed, so ``"DARK": -1`` means that the last ramp set listed is treated as the dark.
+
+* ``TFRAME`` : The time per frame, in seconds.
+
+* ``P_ORDER`` : The polynomial order to fit.
+
+* ``OUTPUT`` : The output ASDF file (the data is *also* written to a FITS file that has the same name except the ending is changed).
+
+* ``SIGN`` : Whether the file should be written with the ramps ascending (1, the choice for Roman) or descending (-1).
+
+* ``SLOPECUT`` : The fraction of the mean slope where we identify the ramp as "soft" saturated and stop fitting the polynomial (between 0.1--0.5 would be typical).
+
+* ``BIAS`` : The bias file information. This includes the fields:
+
+  * ``FILE`` : The file name for the bias, either ASDF or FITS. If FITS, this is assumed to come from ``solid_waffle.noise_run``. If ASDF, then some additional information must be provided (``PATH`` and ``SLICE``).
+
+  * ``PATH`` : The ASDF leaf containing the data.
+
+  * ``SLICE`` : The slice number of the data cube containing bias information.
+
+* ``NEGATIVEPAD`` : How far below the bias level to take as the domain for the polynomial fit.
+
+
 Outputs
 -------
 
+The outputs include both an ASDF file (for integration with the rest of the calibration framework) and a FITS file (for ease of display in ds9).
+
+ASDF output
+^^^^^^^^^^^
+
+The tree contains::
+
+  roman
+      meta
+      data
+      pflat
+      dark
+      dq
+      Smin
+      Sref
+      Smax
+      maxerr
+      ramperr
+  notes
+      script
+      units
+
+The ``data`` element contains the polynomial coefficients as a Legendre cube; that is, the linearized signal S_lin in pixel (i,j) is related to the native signal S via:
+
+  z = 0.5 + 0.5 * ( S(i,j) - ``Smin[j,i]`` ) / ( ``Smax[j,i] - Smin[j,i]`` )
+
+  Slin(i,j) = sum_{L=0}^{order} ``data[L,j,i]`` P_L(z)
+
+The first step puts z into the range from -1 to +1, and then the second line is a polynomial sum. Here "P_L" denotes the L-th Legendre polynomial, normalized to P_L(1) = 1. The shape of the data cube sets the maximum order.
+
+Ancillary information that comes out of this exercise includes the following 2D arrays: the pixel-level flat (``pflat``); the dark slope (``dark`` in DN/s, although it's likely that this won't be the best measurement of the dark current); a 32-bit quality flag (``dq``); the minimum, reference (zero linearized signal), and maximum of the signal range (``Smin``, ``Sref``, and ``Smax``); the maximum error of the fit (``maxerr`` in DN_lin). The ``ramperr`` cube is 3D, with shape (nramps, ny, nx), denoting the error in each ramp type.
+
+The input script is stored as ``script``, and as a reminder the string describing the units is in ``units``.
+
+FITS output
+^^^^^^^^^^^
+
+This is just for display in ds9. It contains a primary and ``PFLAT`` HDU. The primary HDU is a 3D data cube, with shape (ncoefs + 5, ny, nx), where ncoefs = p_order+1 is the number of coefficients. The mapping to the ASDF file is:
+
+* ``fitsfile[0].data[:-5,:,:]`` is a cube containing the Legendre polynomial coefficients in ascending order (same as ``data`` in the ASDF tree).
+
+* ``fitsfile[0].data[-5,:,:]`` = ``Smin``
+
+* ``fitsfile[0].data[-4,:,:]`` = ``Sref``
+
+* ``fitsfile[0].data[-3,:,:]`` = ``Smax``
+
+* ``fitsfile[0].data[-2,:,:]`` = ``maxerr``
+
+* ``fitsfile[0].data[-1,:,:]`` = ``dq``
+
+The FITS output is stored in 64 bits so that ``dq`` is represented exactly even in floating point.
