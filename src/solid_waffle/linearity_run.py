@@ -117,7 +117,8 @@ def build_linearity_file(infile):
     dq[:, :4] |= 2**31
     dq[:, -4:] |= 2**31
 
-    # get bias information
+    # get bias information, from either ASDF bias reference file or FITS noise output from
+    # solid_waffle.noise_run.
     infile = pars["BIAS"]["FILE"]
     if infile[-5:].lower() == ".asdf":
         with asdf.open(infile) as f:
@@ -125,8 +126,11 @@ def build_linearity_file(infile):
             for leaf in pars["BIAS"]["PATH"]:
                 x = x[leaf]
             image_all[p_order + 2, :, :] = x[int(pars["BIAS"]["SLICE"]), :, :]
+    elif infile[-5:].lower() == ".fits":
+        with fits.open(infile) as f:
+            image_all[p_order + 2, :, :] = f["NOISE"].data[int(f["NOISE"].header["BIAS"]), :, :]
     else:
-        raise ValueError("Only ASDF bias input currently accepted. Can't read " + infile)
+        raise ValueError("Only ASDF or FITS bias input currently accepted. Can't read " + infile)
 
     # loop over strips. optional to stop somewhere
     ncblock_use = ncblock
@@ -386,7 +390,9 @@ def build_linearity_file(infile):
     for j in range(32):
         print(f"flag {j:2d}, count {numpy.count_nonzero(dq&(2**j)):7d}")
 
-    fits.HDUList([Im, fits.ImageHDU(pflat)]).writeto(pars["OUTPUT"][:-5] + ".fits", overwrite=True)
+    fits.HDUList([Im, fits.ImageHDU(pflat, name="PFLAT")]).writeto(
+        pars["OUTPUT"][:-5] + ".fits", overwrite=True
+    )
 
     # where the input data came from ...
     pedigree = "DUMMY"
