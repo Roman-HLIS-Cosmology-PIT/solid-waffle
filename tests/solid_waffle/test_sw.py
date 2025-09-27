@@ -46,26 +46,26 @@ def test_run(tmp_path):
             "BFE: true\n"
             "L_IPC: true 0.01\n"
             "NL: quadratic 1.4\n"
-            f"OUTPUT: {tmp_path}/{ty}_{k+1:03d}.fits\n"
+            f"OUTPUT: {temp_dir}/{ty}_{k+1:03d}.fits\n"
         )
 
-        with open(tmp_path + "/sim_cfg.txt", "w") as f:
+        with open(temp_dir + "/sim_cfg.txt", "w") as f:
             f.write(sim_cfg)
-        simulate_flat.run_config(tmp_path + "/sim_cfg.txt")
+        simulate_flat.run_config(temp_dir + "/sim_cfg.txt")
 
     # Now analyze it
     analyze_cfg = (
         "DETECTOR: Test_simulation\n"
         "LIGHT:\n"
-        f"    {tmp_path}/light_001.fits\n"
-        f"    {tmp_path}/light_002.fits\n"
-        f"    {tmp_path}/light_003.fits\n"
-        f"    {tmp_path}/light_004.fits\n"
+        f"    {temp_dir}/light_001.fits\n"
+        f"    {temp_dir}/light_002.fits\n"
+        f"    {temp_dir}/light_003.fits\n"
+        f"    {temp_dir}/light_004.fits\n"
         "DARK:\n"
-        f"    {tmp_path}/dark_005.fits\n"
-        f"    {tmp_path}/dark_006.fits\n"
-        f"    {tmp_path}/dark_007.fits\n"
-        f"    {tmp_path}/dark_008.fits\n"
+        f"    {temp_dir}/dark_005.fits\n"
+        f"    {temp_dir}/dark_006.fits\n"
+        f"    {temp_dir}/dark_007.fits\n"
+        f"    {temp_dir}/dark_008.fits\n"
         "FORMAT: 1001\n"
         "CHAR: Advanced 1 3 3 bfe\n"
         "NBIN: 4 4\n"
@@ -73,14 +73,14 @@ def test_run(tmp_path):
         "TIME2A:  1 2 4 20\n"
         "TIME2B:  1 2 4 20\n"
         "TIME3:   1 2 4 20\n"
-        f"OUTPUT: {tmp_path}/analysis\n"
+        f"OUTPUT: {temp_dir}/analysis\n"
     )
-    with open(tmp_path + "/analyze_cfg.txt", "w") as f:
+    with open(temp_dir + "/analyze_cfg.txt", "w") as f:
         f.write(analyze_cfg)
-    run_ir_all(tmp_path + "/analyze_cfg.txt")
+    run_ir_all(temp_dir + "/analyze_cfg.txt")
 
     # Load the analysis
-    data = np.loadtxt(tmp_path + "/analysis_summary.txt")
+    data = np.loadtxt(temp_dir + "/analysis_summary.txt")
     print(">>", np.mean(data, axis=0))
 
     # outputs from the first run
