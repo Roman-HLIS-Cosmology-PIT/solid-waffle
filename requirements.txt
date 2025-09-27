@@ -1,7 +1,6 @@
 numpy
 matplotlib
 fitsio
-json
 asdf
 scipy
 astropy
