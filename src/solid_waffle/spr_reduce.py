@@ -12,7 +12,7 @@ import re
 import sys
 import time
 
-import numpy
+import numpy as np
 from astropy.io import fits
 
 from . import pyirc
@@ -150,16 +150,16 @@ def run_spr_reduce(arglist, verbose=False):
             nlfile = m.group(1)
 
     N = pyirc.get_nside(formatpars)
-    dmap = numpy.zeros((nfile, N, N))
+    dmap = np.zeros((nfile, N, N))
 
     # Pull down information from NL file
     if use_nl:
-        summaryinfo = numpy.loadtxt(nlfile)
-        sum_nx = int(numpy.amax(summaryinfo[:, 0])) + 1
-        sum_ny = int(numpy.amax(summaryinfo[:, 1])) + 1
+        summaryinfo = np.loadtxt(nlfile)
+        sum_nx = int(np.amax(summaryinfo[:, 0])) + 1
+        sum_ny = int(np.amax(summaryinfo[:, 1])) + 1
         omax = 6
         colindex = [0] * (omax + 1)
-        nlcoefs = numpy.zeros((omax + 1, sum_ny, sum_nx))
+        nlcoefs = np.zeros((omax + 1, sum_ny, sum_nx))
         with open(nlfile, "r") as f:
             for x in f:
                 m = re.search(r"^\# +(\d+), additional non-linearity coefficient, order (\d+) ", x)
@@ -187,28 +187,28 @@ def run_spr_reduce(arglist, verbose=False):
 
     nx = N // dx
     ny = N // dy
-    rx = numpy.zeros(nx, dtype=int)
-    ry = numpy.zeros(ny, dtype=int)
+    rx = np.zeros(nx, dtype=int)
+    ry = np.zeros(ny, dtype=int)
 
-    signals = numpy.zeros((nfile, 13, ny, nx))
-    dmask = numpy.zeros((ny, nx))
+    signals = np.zeros((nfile, 13, ny, nx))
+    dmask = np.zeros((ny, nx))
 
     # List of IPC patterns (actually a list)
     if ipc_pattern == 1:
         for j in range(16):
-            rx[32 * j : 32 * j + 16] = numpy.arange(0, 128, 8) + 256 * j + 8
-            rx[32 * j + 16 : 32 * j + 32] = 256 * j + 247 - numpy.arange(0, 128, 8)[::-1]
-        ry = numpy.arange(dy - 1, N, dy)
+            rx[32 * j : 32 * j + 16] = np.arange(0, 128, 8) + 256 * j + 8
+            rx[32 * j + 16 : 32 * j + 32] = 256 * j + 247 - np.arange(0, 128, 8)[::-1]
+        ry = np.arange(dy - 1, N, dy)
     if ipc_pattern == 2:
         for j in range(16):
-            rx[32 * j : 32 * j + 16] = numpy.arange(0, 128, 8) + 256 * j + 6
-            rx[32 * j + 16 : 32 * j + 32] = 256 * j + 249 - numpy.arange(0, 128, 8)[::-1]
-        ry = numpy.arange(dy - 1, N, dy)
+            rx[32 * j : 32 * j + 16] = np.arange(0, 128, 8) + 256 * j + 6
+            rx[32 * j + 16 : 32 * j + 32] = 256 * j + 249 - np.arange(0, 128, 8)[::-1]
+        ry = np.arange(dy - 1, N, dy)
 
     # Make dark map
     if usedark:
         # Dark map
-        D = numpy.zeros((ndark, N, N))
+        D = np.zeros((ndark, N, N))
         for j in range(ndark):
             thisfile = darkfile + ""
             if j > 0:
@@ -220,7 +220,7 @@ def run_spr_reduce(arglist, verbose=False):
                     raise ValueError("Error: can't construct new file name.")
             thisframe = pyirc.load_segment(thisfile, formatpars, [0, N, 0, N], [1, 1 + tdark], True)
             D[j, :, :] = thisframe[0, :, :] - thisframe[1, :, :]
-        darkframe = numpy.median(D, axis=0) / float(tdark)
+        darkframe = np.median(D, axis=0) / float(tdark)
         del D
 
         # Make FITS output of dark map
@@ -273,11 +273,11 @@ def run_spr_reduce(arglist, verbose=False):
                     xsmin = ixs * (N // sum_nx)
                     xsmax = (ixs + 1) * (N // sum_nx)
                     S = dmap[j, ysmin:ysmax, xsmin:xsmax]  # makes subarray
-                    Sf = numpy.copy(S)
+                    Sf = np.copy(S)
                     # want to solve Sf = S + c_2 S^2 + c_3 S^3 + ...
                     for _ in range(20):
                         # iterative solution
-                        Sp = numpy.copy(S)
+                        Sp = np.copy(S)
                         for p in range(2, omax + 1):
                             Sp += nlcoefs[p, iys, ixs] * S**p
                         S += Sf - Sp
@@ -291,8 +291,8 @@ def run_spr_reduce(arglist, verbose=False):
                 for ix in range(nx):
                     xc = rx[ix]
                     if xc >= 5 and xc < N - 5:
-                        signals[j, 0, iy, ix] = numpy.median(
-                            numpy.concatenate(
+                        signals[j, 0, iy, ix] = np.median(
+                            np.concatenate(
                                 (
                                     dmap[j, yc - 3 : yc - 1, xc - 3 : xc + 4].flatten(),
                                     dmap[j, yc + 2 : yc + 4, xc - 3 : xc + 4].flatten(),
@@ -328,7 +328,7 @@ def run_spr_reduce(arglist, verbose=False):
                         signals[j, 12, iy, ix] = dmap[j, yc - 1, xc + 1] - signals[j, 0, iy, ix]
 
     # Make FITS output of difference map
-    hdu = fits.PrimaryHDU(numpy.mean(dmap, axis=0))
+    hdu = fits.PrimaryHDU(np.mean(dmap, axis=0))
     hdu.header["DATE"] = format(time.asctime(time.localtime(time.time())))
     hdu.header["SCA"] = sca
     hdu.header["ORIGIN"] = "spr_reduce.py"
@@ -337,10 +337,10 @@ def run_spr_reduce(arglist, verbose=False):
     hdul = fits.HDUList([hdu])
     hdul.writeto(outstem + "_sprmean.fits", overwrite=True)
 
-    medsignals = numpy.median(signals, axis=0)
+    medsignals = np.median(signals, axis=0)
     if verbose:
-        print(f"median signal = {numpy.median(medsignals[1,:,:]):8.6f} DN")
-    alpha = numpy.zeros((13, ny, nx))
+        print(f"median signal = {np.median(medsignals[1,:,:]):8.6f} DN")
+    alpha = np.zeros((13, ny, nx))
 
     # Masking based on the dark
     if usedark:
@@ -353,7 +353,7 @@ def run_spr_reduce(arglist, verbose=False):
                         xc >= 5
                         and xc < N - 5
                         and (
-                            numpy.amax(darkframe[yc - 1 : yc + 2, xc - 1 : xc + 2])
+                            np.amax(darkframe[yc - 1 : yc + 2, xc - 1 : xc + 2])
                             > 1e-3 * tdark * medsignals[1, iy, ix]
                         )
                     ):
@@ -363,7 +363,7 @@ def run_spr_reduce(arglist, verbose=False):
     # -- would usually indicate a problem
     for iy in range(ny):
         for ix in range(nx):
-            if 0.1 * medsignals[1, iy, ix] < numpy.amax(medsignals[5:13, iy, ix]):
+            if 0.1 * medsignals[1, iy, ix] < np.amax(medsignals[5:13, iy, ix]):
                 dmask[iy, ix] = 1
 
     # alpha map
@@ -391,11 +391,11 @@ def run_spr_reduce(arglist, verbose=False):
         for ix in range(nx):
             if dmask[iy, ix] > 0.5:
                 # first try 8 nearest neighbors
-                aDen = numpy.sum(1 - dmask[iy - 1 : iy + 2, ix - 1 : ix + 2])
+                aDen = np.sum(1 - dmask[iy - 1 : iy + 2, ix - 1 : ix + 2])
                 if aDen > 0:
                     for k in range(12):
                         alpha[k, iy, ix] = (
-                            numpy.sum(
+                            np.sum(
                                 (1 - dmask[iy - 1 : iy + 2, ix - 1 : ix + 2])
                                 * alpha[k, iy - 1 : iy + 2, ix - 1 : ix + 2]
                             )
@@ -427,8 +427,8 @@ def run_spr_reduce(arglist, verbose=False):
     for k in range(Narg):
         keyword = f"ARGV{k:02d}"
         hdu.header[keyword] = arglist[k]
-    hdu.header["MASKSIZE"] = f"{int(numpy.sum(dmask)):d}/{nx*ny:d}"
-    hdu.header["MEDSIG"] = (f"{numpy.median(medsignals[1,:,:]):8.2f}", "Median signal in central pixel")
+    hdu.header["MASKSIZE"] = f"{int(np.sum(dmask)):d}/{nx*ny:d}"
+    hdu.header["MEDSIG"] = (f"{np.median(medsignals[1,:,:]):8.2f}", "Median signal in central pixel")
     for k in range(len(filelist)):
         keyword = f"INF{k:02d}"
         hdu.header[keyword] = filelist[k]
@@ -437,8 +437,8 @@ def run_spr_reduce(arglist, verbose=False):
 
     if verbose:
         print("median alpha information ->")
-        print(numpy.median(alpha, axis=[1, 2]))
-        print(f"Number of masked pixels = {int(numpy.sum(dmask)):d}/{nx*ny:d}")
+        print(np.median(alpha, axis=[1, 2]))
+        print(f"Number of masked pixels = {int(np.sum(dmask)):d}/{nx*ny:d}")
 
 
 if __name__ == "__main__":
