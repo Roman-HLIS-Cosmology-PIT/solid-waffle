@@ -19,7 +19,7 @@ Long description::
     time t (units: s)
     time step for read from t_a to t_a+1 (will need to check # for convergence)
 
-    NOTE: to run this, one needs:
+    NOTE: to run some modes, one needs:
      ** a copy of a DCL flat file with the name set below
 
 """
@@ -30,14 +30,13 @@ import sys
 import fitsio
 import numpy as np
 from fitsio import FITSHDR
-from numpy.random import normal
 
 from ..ftsolve import p2kernel
 from ..pyirc import get_nside
 from .detector_functions import TestKernels, calc_area_defect, calculate_ipc
 
 
-def PairPoisson(myMean, myShape, QY_offset, QY_p2):
+def PairPoisson(myMean, myShape, QY_offset, QY_p2, RNG):
     """
     Build distribution of pairs of points.
 
@@ -51,6 +50,8 @@ def PairPoisson(myMean, myShape, QY_offset, QY_p2):
         Maximum offset of the "other" electron to consider (usually 2 is enough).
     QY_p2 : np.array
         The pairwise probability array.
+    RNG : numpy.random.Generator or numpy.random.RandomState
+        The random number generator.
 
     Returns
     -------
@@ -64,7 +65,7 @@ def PairPoisson(myMean, myShape, QY_offset, QY_p2):
     (yg, xg) = myShape
     for j in range(2 * QY_offset + 1):
         for i in range(2 * QY_offset + 1):
-            dP = np.random.poisson(myMean * QY_p2[j, i], (yg + 2 * QY_offset, xg + 2 * QY_offset))
+            dP = RNG.poisson(myMean * QY_p2[j, i], (yg + 2 * QY_offset, xg + 2 * QY_offset))
             Ptot += dP[QY_offset : yg + QY_offset, QY_offset : xg + QY_offset]
             Ptot += dP[j : yg + j, i : xg + i]
     return Ptot
@@ -125,6 +126,9 @@ class Simulation:
         QY_offset = 2
         QY_p2 = np.zeros((5, 5))
         QY_p2[2, 2] = 1
+
+        # RNG choice
+        legacy = False
 
         # Read in information
         for line in cfg.splitlines():
@@ -226,6 +230,11 @@ class Simulation:
             if m:
                 outfile = m.group(1)
 
+            # Use legacy random number generator?
+            m = re.search(r"^LEGACY\s*$", line)
+            if m:
+                legacy = True
+
         # Stuff to save
         save_pars = [
             "formatpars",
@@ -249,9 +258,9 @@ class Simulation:
             "reset_frames",
             "resetlevel",
             "QY_omega",
-            "QY_cov",
             "QY_offset",
             "QY_p2",
+            "legacy",
         ]
 
         # now save the dictionary
@@ -301,7 +310,11 @@ class Simulation:
             )
             print("Illumination:", self.pars["I_"], "ph/s/pix; QE =", self.pars["QE"])
             print("RNG seed ->", self.pars["rngseed"])
-        np.random.seed(self.pars["rngseed"])
+        RNG = (
+            np.random.RandomState(seed=self.pars["rngseed"])
+            if self.pars["legacy"]
+            else np.random.Generator(seed=self.pars["rngseed"])
+        )
 
         # Reset first frame if needed
         offset_frame[:, :, :] = self.pars["resetlevel"]
@@ -319,7 +332,7 @@ class Simulation:
             # and the brighter-fatter effect.  First timestep is Poisson realization
             if tdx == 1:
                 allQ[idx, :, :] = allQ[idx - 1, :, :]
-                allQ[idx, xmin:xmax, ymin:ymax] += np.random.poisson(
+                allQ[idx, xmin:xmax, ymin:ymax] += RNG.poisson(
                     self.pars["QE"] * mean * (1.0 - self.pars["QY_omega"]) / (1.0 + self.pars["QY_omega"]),
                     allQ[idx, xmin:xmax, xmin:xmax].shape,
                 )
@@ -328,6 +341,7 @@ class Simulation:
                     allQ[idx, xmin:xmax, xmin:xmax].shape,
                     self.pars["QY_offset"],
                     self.pars["QY_p2"],
+                    RNG,
                 )
             else:
                 # If not the first step, and the brighter-fatter effect is turned
@@ -356,19 +370,18 @@ class Simulation:
                         * (1.0 - self.pars["QY_omega"])
                         / (1.0 + self.pars["QY_omega"])
                     )
-                    allQ[idx, xmin:xmax, ymin:ymax] = allQ[idx - 1, xmin:xmax, ymin:ymax] + np.random.poisson(
-                        meanQ
-                    )
+                    allQ[idx, xmin:xmax, ymin:ymax] = allQ[idx - 1, xmin:xmax, ymin:ymax] + RNG.poisson(meanQ)
                     allQ[idx, xmin:xmax, ymin:ymax] += PairPoisson(
                         self.pars["QE"] * mean * self.pars["QY_omega"] / (1.0 + self.pars["QY_omega"]),
                         allQ[idx, xmin:xmax, xmin:xmax].shape,
                         self.pars["QY_offset"],
                         self.pars["QY_p2"],
+                        RNG,
                     )
                 else:
                     # Otherwise Poisson draw the charge as before
                     allQ[idx, :, :] = allQ[idx - 1, :, :]
-                    allQ[idx, xmin:xmax, ymin:ymax] += np.random.poisson(
+                    allQ[idx, xmin:xmax, ymin:ymax] += RNG.poisson(
                         self.pars["QE"]
                         * mean
                         * (1.0 - self.pars["QY_omega"])
@@ -380,6 +393,7 @@ class Simulation:
                         allQ[idx, xmin:xmax, xmin:xmax].shape,
                         self.pars["QY_offset"],
                         self.pars["QY_p2"],
+                        RNG,
                     )
 
             if idx == 0:
@@ -435,7 +449,7 @@ class Simulation:
             pass
         else:
             # a small amount of Gaussian noise, 12 e
-            data_cube_Q += 10 * normal(size=(self.pars["tsamp"], N, N))
+            data_cube_Q += 10 * RNG.normal(size=(self.pars["tsamp"], N, N))
 
         # Convert charge to signal, clipping values<0 and >2**16
         data_cube_S = np.array(np.clip(data_cube_Q / self.pars["gain"], 0, 65535), dtype=np.uint16)
@@ -445,6 +459,7 @@ class Simulation:
         hdr["GAIN"] = self.pars["gain"]
         hdr["ILLUMIN"] = self.pars["I_"]
         hdr["QE"] = self.pars["QE"]
+        hdr["LEGACY"] = self.pars["legacy"]
         hdr["RNGSEED"] = self.pars["rngseed"]
         if self.pars["lipcmode"] == "true":
             hdr["LINIPC"] = self.pars["lipc_alpha"][0]
