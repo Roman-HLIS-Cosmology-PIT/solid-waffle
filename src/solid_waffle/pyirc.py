@@ -92,6 +92,10 @@ Test_SubBeta = False
 
 # <== THESE FUNCTIONS DEPEND ON THE FORMAT OF THE INPUT FILES ==>
 
+# Recall the naming convention for formatpars:
+#    1 ...  999 = lab test data
+# 1001 ... 1999 = dedicated test configurations
+# 2001 ... 2999 = WFI flight-like data (ASDF)
 
 def get_version():
     """Version number of script"""
@@ -118,6 +122,7 @@ def get_nside(formatpars):
 
     """
 
+    # Lab tests
     if formatpars == 1:
         return 4096
     if formatpars == 2:
@@ -132,6 +137,10 @@ def get_nside(formatpars):
         return 4096
     if formatpars == 7:
         return 2048
+
+    # Test configurations
+    if formatpars == 1001:
+        return 512
 
 
 # Get number of time slices
@@ -154,7 +163,7 @@ def get_num_slices(formatpars, filename):
     """
 
     # Switch based on input format
-    if formatpars == 1 or formatpars == 2 or formatpars == 5:
+    if formatpars == 1 or formatpars == 2 or formatpars == 5 or formatpars==1001:
         hdus = fits.open(filename)
         ntslice = int(hdus[0].header["NAXIS3"])
         hdus.close()
@@ -217,7 +226,7 @@ def load_segment(filename, formatpars, xyrange, tslices, verbose):
     output_cube = np.zeros((ntslice_use, nyuse, nxuse))
 
     # Switch based on input format
-    if formatpars == 1 or formatpars == 2 or formatpars == 5:
+    if formatpars == 1 or formatpars == 2 or formatpars == 5 or formatpars == 1001:
         if use_fitsio:
             fileh = fitsio.FITS(filename)
             N = get_nside(formatpars)
