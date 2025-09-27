@@ -97,6 +97,7 @@ Test_SubBeta = False
 # 1001 ... 1999 = dedicated test configurations
 # 2001 ... 2999 = WFI flight-like data (ASDF)
 
+
 def get_version():
     """Version number of script"""
     return 37
@@ -163,7 +164,7 @@ def get_num_slices(formatpars, filename):
     """
 
     # Switch based on input format
-    if formatpars == 1 or formatpars == 2 or formatpars == 5 or formatpars==1001:
+    if formatpars == 1 or formatpars == 2 or formatpars == 5 or formatpars == 1001:
         hdus = fits.open(filename)
         ntslice = int(hdus[0].header["NAXIS3"])
         hdus.close()
