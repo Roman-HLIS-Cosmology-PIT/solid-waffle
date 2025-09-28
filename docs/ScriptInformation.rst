@@ -77,21 +77,31 @@ The format of the input files::
 
 Note that aside from the array dimensions, the script does *not* use any information from the FITS headers, it only uses the image data.
 
-The options are:
+The options fall into a few categories:
 
-* 1 (default if not specified): H4RG-10, FITS cube, ascending ramps (signal level in DN increases during a flat). The data should be in HDU #0, with ``NAXIS`` = 3, ``NAXIS1`` = ``NAXIS2`` = 4096, and ``NAXIS3`` equal to the number of frames in the flat.
+* DCL and PPL test data (for use with ground test data from Roman and Euclid)
 
-* 2: same as 1, but for an H2RG (``NAXIS1`` = ``NAXIS2`` = 2048).
+  * 1 (default if not specified): H4RG-10, FITS cube, ascending ramps (signal level in DN increases during a flat). The data should be in HDU #0, with ``NAXIS`` = 3, ``NAXIS1`` = ``NAXIS2`` = 4096, and ``NAXIS3`` equal to the number of frames in the flat.
 
-* 3: H4RG-10, descending ramps (signal level in DN decreases during a flat). The images are in HDU #1 ... HDU #[last time slice], with ``NAXIS`` =2 and ``NAXIS1`` = ``NAXIS2`` = 4096.
+  * 2: same as 1, but for an H2RG (``NAXIS1`` = ``NAXIS2`` = 2048).
 
-* 4: H4RG-10, descending ramps (signal level in DN decreases during a flat). The images are in HDU #1, with ``NAXIS`` = 4, ``NAXIS1`` = ``NAXIS2`` = 4096, ``NAXIS3`` = [number of time slices], and ``NAXIS4`` = 1. (Used for some of the QE data.)
+  * 3: H4RG-10, descending ramps (signal level in DN decreases during a flat). The images are in HDU #1 ... HDU #[last time slice], with ``NAXIS`` =2 and ``NAXIS1`` = ``NAXIS2`` = 4096.
 
-* 5: H4RG-10, descending ramps.  The images are in HDU #1, with ``NAXIS1`` = ``NAXIS2`` = 4096, ``NAXIS3`` = [number of time slices]. (Used by PPL.)
+  * 4: H4RG-10, descending ramps (signal level in DN decreases during a flat). The images are in HDU #1, with ``NAXIS`` = 4, ``NAXIS1`` = ``NAXIS2`` = 4096, ``NAXIS3`` = [number of time slices], and ``NAXIS4`` = 1. (Used for some of the QE data.)
 
-* 6: H4RG-10, ascending ramps. The images are in HDU #1, with ``NAXIS`` = 4, ``NAXIS1`` = 4096 or 4224 (latter includes reference output as 33rd channel), ``NAXIS2`` = 4096, ``NAXIS3`` = [number of time slices], and ``NAXIS4`` = 1. (Used for triplet testing.)
+  * 5: H4RG-10, descending ramps.  The images are in HDU #1, with ``NAXIS1`` = ``NAXIS2`` = 4096, ``NAXIS3`` = [number of time slices]. (Used by PPL.)
 
-* 7: H2RG, similar to 3, but ``NAXIS1`` = ``NAXIS2`` = 2048. (Used for some of the Euclid detector data.)
+  * 6: H4RG-10, ascending ramps. The images are in HDU #1, with ``NAXIS`` = 4, ``NAXIS1`` = 4096 or 4224 (latter includes reference output as 33rd channel), ``NAXIS2`` = 4096, ``NAXIS3`` = [number of time slices], and ``NAXIS4`` = 1. (Used for triplet testing.)
+
+  * 7: H2RG, similar to 3, but ``NAXIS1`` = ``NAXIS2`` = 2048. (Used for some of the Euclid detector data.)
+
+* Unit tests (for simulations of small-format arrays to enable fast tests)
+
+  * 1001: 512x512 array with 4 reference pixels, FITS cube, ascending ramps (signal level in DN increases during a flat). The data should be in HDU #0, with ``NAXIS`` = 3, ``NAXIS1`` = ``NAXIS2`` = 4096, and ``NAXIS3`` equal to the number of frames in the flat.
+
+* Roman TVAC and flight-like data
+
+  * ( *not yet enabled* )
 
 NBIN
 ----
