@@ -2,9 +2,16 @@
 [project]
 name = "solid_waffle"
 license = {file = "LICENSE"}
-readme = "README.md"
+readme = "README.rst"
 authors = [
-    { name = "Christopher M. Hirata", email = "hirata.10@osu.edu" }
+    { name = "Christopher M. Hirata", email = "hirata.10@osu.edu" },
+    { name = "Ami Choi", email = "ami.choi@nasa.gov" },
+    { name = "Jenna Freudenburg", email = "jenna.freudenburg@utoronto.ca" },
+    { name = "Jahmour Givans", email = "jgivans@princeton.edu" },
+    { name = "Anna Porredon", email = "Annamaria.Porredon@ciemat.es" }
+]
+maintainers = [
+    { name = "Roman High Latitude Imaging Survey Cosmology Project Infrastructure Team" }
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
