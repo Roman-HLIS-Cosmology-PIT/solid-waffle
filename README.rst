@@ -9,6 +9,8 @@ Overview
 
 *Nota bene*\ :  These scripts are not ready for "black box" use in the sense that unanticipated defects in different detectors can cause issues in the stability of the characterization.  Some work and testing is required before given results can be trusted.  Manual masking is required in some cases, and we are working towards getting this code more streamlined and user-friendly in that regard. Please approach with caution and reach out to the `contacts <#contacts>`_ listed below for help.
 
+See the `readthedocs page <https://solid-waffle.readthedocs.io/en/latest/>`_.
+
 Table of Contents
 -----------------
 
