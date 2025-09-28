@@ -129,16 +129,6 @@ projects
 
   * speckle: Tools for speckle fringe data.
 
-How to Get Started
-------------------
-
-Running the code requires python modules such as numpy, scipy, astropy, matplotlib, and fitsio, although note that we have not extensively tested this across different python versions and cannot guarantee everything will run smoothly.
-
-
-#. The code expects input flats and darks in FITS format. Specifics on the expected format are described in ``ScriptInformation.txt``. Aside from the array dimensions, the script does not use information from the FITS headers, only the image data. If you find that none of the available options work for the format your data is in, you will need to make a new format and associated format code in ``pyirc.py`` (modifying the functions ``get_nside``\ , ``get_num_slices``\ , and ``load_segment`` all in the first part of ``pyirc.py``\ ).
-#. Start with a simple version of the configuration, such as provided in example_config_wfirst_h4rg_18237. You will replace the two placeholder files in the LIGHT section with your flat files, and the ones in the DARK section with dark files. You will also change the FORMAT parameter to the format code that matches your data format as described in ``ScriptInformation.txt``. You may also need to adjust the TIME inputs depending on how many frames your files contain.
-#. ``python test_run.py <yourconfigfile>``
-#. Output files will appear in the directory specified in the OUTPUT line of the config.
 
 Contacts
 --------
