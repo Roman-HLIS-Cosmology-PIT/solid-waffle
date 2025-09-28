@@ -5,6 +5,5 @@ pytest-cov # Used to report total code coverage
 pytest-xdist
 ruff # Used for static linting of files
 sphinx-autoapi
-sphinx-build
 sphinx-copybutton
 sphinx-rtd-theme
