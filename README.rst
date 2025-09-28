@@ -1,3 +1,4 @@
+.. image:: https://codecov.io/gh/Roman-HLIS-Cosmology-PIT/solid-waffle/graph/badge.svg?token=7fmH3pUXiX
 
 solid-waffle
 ============
