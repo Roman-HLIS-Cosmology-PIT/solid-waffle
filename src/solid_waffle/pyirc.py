@@ -326,10 +326,10 @@ def load_segment(filename, formatpars, xyrange, tslices, verbose):
         for ts in range(ntslice_use):
             t = tslices[ts]
             if ts >= 1 and t == tslices[ts - 1]:
-                outputcube[ts, :, :] = output_cube[ts - 1, :, :] # asked for the same slice again
+                output_cube[ts, :, :] = output_cube[ts - 1, :, :] # asked for the same slice again
             else:
                 output_cube[ts, :, :] = np.array(
-                    fileh["roman"]["data"][t-1, xyrange[2] : xyrange[3], xyrange[0] : xyrange[1]]
+                    fileh["roman"]["data"][t-1, xyrange[2]:xyrange[3], xyrange[0]:xyrange[1]]
                 )
         fileh.close()
     else:
