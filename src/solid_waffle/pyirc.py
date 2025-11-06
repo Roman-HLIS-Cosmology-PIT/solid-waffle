@@ -76,6 +76,7 @@ import scipy.ndimage
 import scipy.stats
 from astropy.io import fits
 from scipy.signal import fftconvolve
+import asdf
 
 from .ftsolve import (
     decenter,
@@ -143,6 +144,9 @@ def get_nside(formatpars):
     if formatpars == 1001:
         return 512
 
+    # is asdf the wfi flight-like data or still lab test data?? I went with the one that said asdf!
+    if formatpars == 2001:
+        return 4096
 
 # Get number of time slices
 def get_num_slices(formatpars, filename):
@@ -176,6 +180,10 @@ def get_num_slices(formatpars, filename):
         hdus = fits.open(filename)
         ntslice = int(hdus[1].header["NAXIS3"])
         hdus.close()
+    elif formatpars == 2001: 
+        af = asdf.open(filename)
+        ntslice = af["roman"]["meta"]["exposure"]["ngroups"]
+        af.close()
     else:
         print("Error! Invalid formatpars =", formatpars)
         exit()
@@ -312,6 +320,18 @@ def load_segment(filename, formatpars, xyrange, tslices, verbose):
         else:
             print("Error: non-fitsio methods not yet supported for formatpars=6")
             exit()
+    elif formatpars == 2001:
+        fileh = asdf.open(filename)
+        N = get_nside(formatpars) # might need in the future
+        for ts in range(ntslice_use):
+            t = tslices[ts]
+            if ts >= 1 and t == tslices[ts - 1]:
+                outputcube[ts, :, :] = output_cube[ts - 1, :, :] # asked for the same slice again
+            else:
+                output_cube[ts, :, :] = np.array(
+                    fileh["roman"]["data"][t-1, xyrange[2] : xyrange[3], xyrange[0] : xyrange[1]]
+                )
+        fileh.close()
     else:
         print("Error! Invalid formatpars =", formatpars)
         exit()
