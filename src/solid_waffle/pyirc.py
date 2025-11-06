@@ -182,7 +182,7 @@ def get_num_slices(formatpars, filename):
         hdus.close()
     elif formatpars == 2001: 
         af = asdf.open(filename)
-        ntslice = af["roman"]["meta"]["exposure"]["ngroups"]
+        ntslice = np.shape(af["roman"]["data"])[0]
         af.close()
     else:
         print("Error! Invalid formatpars =", formatpars)
