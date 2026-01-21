@@ -144,7 +144,7 @@ def get_nside(formatpars):
     if formatpars == 1001:
         return 512
 
-    # is asdf the wfi flight-like data or still lab test data?? I went with the one that said asdf!
+    # asdf files
     if formatpars == 2001:
         return 4096
 
@@ -328,7 +328,7 @@ def load_segment(filename, formatpars, xyrange, tslices, verbose):
             if ts >= 1 and t == tslices[ts - 1]:
                 output_cube[ts, :, :] = output_cube[ts - 1, :, :] # asked for the same slice again
             else:
-                output_cube[ts, :, :] = np.array(
+                output_cube[ts, :, :] = 65535 - np.array(
                     fileh["roman"]["data"][t-1, xyrange[2]:xyrange[3], xyrange[0]:xyrange[1]]
                 )
         fileh.close()
