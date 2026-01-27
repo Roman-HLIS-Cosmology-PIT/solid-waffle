@@ -1,4 +1,5 @@
 import numpy as np
+import os
 import asdf
 import fitsio
 import glob
