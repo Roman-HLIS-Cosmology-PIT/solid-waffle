@@ -11,7 +11,7 @@ def main():
     asdf_files = glob.glob(os.path.join(current_directory, "*.asdf"))
     print("ASDF files found: ") 
     for fn in asdf_files:
-        print(file)
+        print(fn)
     for fn in asdf_files:
         new_file_path = os.path.join(output_dir, base.replace(".asdf", "asdf_to.fits"))
         if os.path.exists(new_file_path):
