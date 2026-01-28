@@ -8,7 +8,8 @@ import time
 
 def main():
     current_dir = os.getcwd();
-    output_dir = os.path.join(os.path.dirname(current_dir), "fits_converted")
+    current_dir_name = os.path.basename(current_dir)
+    output_dir = os.path.join(os.path.dirname(current_dir), current_dir_name + "_fits_converted")
     os.makedirs(output_dir, exist_ok=True)
     asdf_files = glob.glob(os.path.join(current_dir, "*.asdf"))
     print("ASDF files found: ") 
