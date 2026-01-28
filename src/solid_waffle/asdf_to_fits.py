@@ -7,8 +7,9 @@ from astropy.io import fits
 import time
 
 def main():
-    current_directory = os.getcwd();
-    asdf_files = glob.glob(os.path.join(current_directory, "*.asdf"))
+    current_dir = os.getcwd();
+    output_dir = os.path.join(os.path.dirname(current_dir), "fits_converted")
+    asdf_files = glob.glob(os.path.join(current_dir, "*.asdf"))
     print("ASDF files found: ") 
     for fn in asdf_files:
         print(fn)
