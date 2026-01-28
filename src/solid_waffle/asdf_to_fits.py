@@ -14,6 +14,7 @@ def main():
     for fn in asdf_files:
         print(fn)
     for fn in asdf_files:
+        base = os.path.basename(fn)
         new_file_path = os.path.join(output_dir, base.replace(".asdf", "asdf_to.fits"))
         if os.path.exists(new_file_path):
             print(f"Skipping (already exists): {new_file_path}")
