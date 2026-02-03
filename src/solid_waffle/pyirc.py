@@ -323,7 +323,7 @@ def load_segment(filename, formatpars, xyrange, tslices, verbose):
             exit()
     elif formatpars == 2001:
         fileh = asdf.open(filename)
-        N = get_nside(formatpars)  # might need in the future
+        _ = get_nside(formatpars)  # might need in the future
         for ts in range(ntslice_use):
             t = tslices[ts]
             if ts >= 1 and t == tslices[ts - 1]:
