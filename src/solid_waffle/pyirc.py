@@ -180,7 +180,7 @@ def get_num_slices(formatpars, filename):
         hdus = fits.open(filename)
         ntslice = int(hdus[1].header["NAXIS3"])
         hdus.close()
-    elif formatpars == 2001: 
+    elif formatpars == 2001:
         af = asdf.open(filename)
         ntslice = np.shape(af["roman"]["data"])[0]
         af.close()
