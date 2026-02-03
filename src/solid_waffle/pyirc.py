@@ -69,6 +69,7 @@ import copy
 import sys
 import warnings
 
+import asdf
 import fitsio
 import numpy as np
 import scipy
@@ -76,7 +77,6 @@ import scipy.ndimage
 import scipy.stats
 from astropy.io import fits
 from scipy.signal import fftconvolve
-import asdf
 
 from .ftsolve import (
     decenter,
@@ -322,14 +322,14 @@ def load_segment(filename, formatpars, xyrange, tslices, verbose):
             exit()
     elif formatpars == 2001:
         fileh = asdf.open(filename)
-        N = get_nside(formatpars) # might need in the future
+        N = get_nside(formatpars)  # might need in the future
         for ts in range(ntslice_use):
             t = tslices[ts]
             if ts >= 1 and t == tslices[ts - 1]:
-                output_cube[ts, :, :] = output_cube[ts - 1, :, :] # asked for the same slice again
+                output_cube[ts, :, :] = output_cube[ts - 1, :, :]  # asked for the same slice again
             else:
                 output_cube[ts, :, :] = 65535 - np.array(
-                    fileh["roman"]["data"][t-1, xyrange[2]:xyrange[3], xyrange[0]:xyrange[1]]
+                    fileh["roman"]["data"][t - 1, xyrange[2] : xyrange[3], xyrange[0] : xyrange[1]]
                 )
         fileh.close()
     else:
