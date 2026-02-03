@@ -148,6 +148,7 @@ def get_nside(formatpars):
     if formatpars == 2001:
         return 4096
 
+
 # Get number of time slices
 def get_num_slices(formatpars, filename):
     """
