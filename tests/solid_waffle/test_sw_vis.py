@@ -23,15 +23,15 @@ def test_run_vis(tmp_path):
 
     # Make the simulation
 
-    for k in range(8):
+    for k in range(12):
         illum = 300.0
         ty = "light"
-        if k >= 4:
+        if k >= 6:
             illum = 0.0
             ty = "dark"
 
         # Insert quantum yield here
-        qyline = "QY: 0.1 0.09 0.0 0.09" if 2 <= k <= 3 else ""
+        qyline = "QY: 0.1 0.09 0.0 0.09" if 3 <= k < 6 else ""
 
         sim_cfg = (
             "FORMAT: 1001\n"
@@ -63,15 +63,19 @@ def test_run_vis(tmp_path):
         "LIGHT:\n"
         f"    {temp_dir}/light_001.fits\n"
         f"    {temp_dir}/light_002.fits\n"
-        "DARK:\n"
-        f"    {temp_dir}/dark_005.fits\n"
-        f"    {temp_dir}/dark_006.fits\n"
-        "VISLIGHT:\n"
         f"    {temp_dir}/light_003.fits\n"
-        f"    {temp_dir}/light_004.fits\n"
-        "VISDARK:\n"
+        "DARK:\n"
         f"    {temp_dir}/dark_007.fits\n"
         f"    {temp_dir}/dark_008.fits\n"
+        f"    {temp_dir}/dark_009.fits\n"
+        "VISLIGHT:\n"
+        f"    {temp_dir}/light_004.fits\n"
+        f"    {temp_dir}/light_005.fits\n"
+        f"    {temp_dir}/light_006.fits\n"
+        "VISDARK:\n"
+        f"    {temp_dir}/dark_010.fits\n"
+        f"    {temp_dir}/dark_011.fits\n"
+        f"    {temp_dir}/dark_012.fits\n"
         "FORMAT: 1001\n"
         "CHAR: Advanced 1 3 3 bfe\n"
         "NBIN: 4 4\n"
@@ -91,13 +95,13 @@ def test_run_vis(tmp_path):
     print(">>", extracted)
 
     # outputs from the first run
-    expected_outputs = np.array([0.1, 0.09, 0.0, 0.09, 300.0 * 0.8 * 1.1])
+    expected_outputs = np.array([0.1, 0.09, 0.0, 0.09, 300.0 * 0.8 * 2.75])
     print("<<", expected_outputs)
 
     # tolerances -- if anything changes by more than these amounts,
     # pre-commit should warn the user!
-    tol = np.array([0.02, 0.02, 0.02, 0.02, expected_outputs[-1] * 0.1])
+    tol = np.array([0.015, 0.015, 0.015, 0.015, expected_outputs[-1] * 0.05])
 
-    diff = np.amax(np.abs(np.mean(data, axis=0) - expected_outputs) / tol)
+    diff = np.amax(np.abs(extracted - expected_outputs) / tol)
     print(diff)
     assert diff < -1.0  # will fail so we can look at it
