@@ -104,4 +104,4 @@ def test_run_vis(tmp_path):
 
     diff = np.amax(np.abs(extracted - expected_outputs) / tol)
     print(diff)
-    assert diff < -1.0  # will fail so we can look at it
+    assert diff < 1.0
