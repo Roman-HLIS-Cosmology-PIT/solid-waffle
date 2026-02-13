@@ -1,6 +1,8 @@
-import numpy as np
+"""Test functions for predicting the flat field correlation function."""
 
-from pyimcom.ftsolve import solve_corr, solve_corr_many
+import numpy as np
+from solid_waffle.ftsolve import solve_corr, solve_corr_many
+
 
 def test_solve_corr_compare():
     """Compare solve_corr to solve_corr_many."""
@@ -9,7 +11,7 @@ def test_solve_corr_compare():
     bfek = np.zeros((5, 5))
     for i in range(5):
         for j in range(5):
-            bfek[j, i] = 4.0e-7 * np.exp(-0.5 * np.hypot(i - 2.9, j - 3.05)**2)
+            bfek[j, i] = 4.0e-7 * np.exp(-0.5 * np.hypot(i - 2.9, j - 3.05) ** 2)
     bfek[2, 2] -= np.sum(bfek)  # sums to zero
 
     # settings
