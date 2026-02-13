@@ -28,4 +28,4 @@ def test_solve_corr_compare():
 
     print(cf_many)
     print(np.amax(np.abs(cf_many - cf_single)))
-    assert np.all(cf_many) > 1.0e9  # will fail
+    assert np.amax(np.abs(cf_many - cf_single)) < 1.0e-4 * np.amax(np.abs(cf_many))
