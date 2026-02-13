@@ -76,6 +76,7 @@ def test_run_vis(tmp_path):
         "CHAR: Advanced 1 3 3 bfe\n"
         "NBIN: 4 4\n"
         "TIME:    1 10 12 20\n"
+        "NLPOLY: 2 1 20\n"
         "VISTIME: 1 20 1 3\n"
         "COPYIRBFE\n"
         f"OUTPUT: {temp_dir}/analysis\n"
