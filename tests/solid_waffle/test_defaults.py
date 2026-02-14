@@ -43,7 +43,7 @@ def test_defaults():
     assert np.shape(TestKernels.get_bfe_kernel_3x3()) == (3, 3)
     assert np.shape(TestKernels.get_bfe_kernel_5x5_ir()) == (5, 5)
     assert np.shape(TestKernels.get_bfe_kernel_5x5_symm()) == (5, 5)
-    assert np.shape(TestKernels.get_bfe_kernel_18237ir()) == (5, 5)
+    assert np.shape(TestKernels.get_bfe_kernel_5x5_18237ir()) == (5, 5)
     assert np.shape(TestKernels.get_bfe_kernel_5x5_vis()) == (5, 5)
     assert np.shape(TestKernels.get_bfe_kernel_zeros()) == (5, 5)
     assert np.all(np.abs(TestKernels.get_bfe_kernel_zeros()) < 1.0e-12)  # should be zero
