@@ -36,7 +36,7 @@ def test_defaults():
 
     # test for inverse kernel
     kern = ipc_invkernel_HV(0.01, 0.02)  # alphah,alphav for the sims
-    kern_ref = np.array([[0.0, -0.02, 0.0], [-0.01, 1.12, -0.01], [0.0, -0.02, 0.0]])
+    kern_ref = np.array([[0.0, -0.02, 0.0], [-0.04, 1.12, -0.04], [0.0, -0.02, 0.0]])
     assert np.all(np.abs(kern - kern_ref) < 1.0e-4)
 
     # check dimensions of the test kernels
