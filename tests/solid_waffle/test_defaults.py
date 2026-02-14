@@ -7,6 +7,7 @@ from solid_waffle.flat_simulator.detector_functions import (
     _main,
     a_symmetric_avg,
     auto_convolve_kernel,
+    ipc_invkernel_HV,
     ipc_kernel_HV,
 )
 
@@ -32,5 +33,19 @@ def test_defaults():
 
     print(np.fliplr(input_bfe_a))
     assert np.abs(np.fliplr(input_bfe_a)[3, 0] + 0.0083) < 1.0e-4
+
+    # test for inverse kernel
+    kern = ipc_invkernel_HV(0.01, 0.02)  # alphah,alphav for the sims
+    kern_ref = np.array([[0.0, -0.02, 0.0], [-0.01, 1.12, -0.01], [0.0, -0.02, 0.0]])
+    assert np.all(np.abs(kern - kern_ref) < 1.0e-4)
+
+    # check dimensions of the test kernels
+    assert np.shape(TestKernels.get_bfe_kernel_3x3()) == (3, 3)
+    assert np.shape(TestKernels.get_bfe_kernel_5x5_ir()) == (5, 5)
+    assert np.shape(TestKernels.get_bfe_kernel_5x5_symm()) == (5, 5)
+    assert np.shape(TestKernels.get_bfe_kernel_18237ir()) == (5, 5)
+    assert np.shape(TestKernels.get_bfe_kernel_5x5_vis()) == (5, 5)
+    assert np.shape(TestKernels.get_bfe_kernel_zeros()) == (5, 5)
+    assert np.all(np.abs(TestKernels.get_bfe_kernel_zeros()) < 1.0e-12)  # should be zero
 
     _main()
