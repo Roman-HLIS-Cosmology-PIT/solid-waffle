@@ -402,6 +402,7 @@ def a_symmetric_avg(coeffs, round=None):
         means = np.around(means, round)
     return means
 
+
 def _main():
     """Tests from the Choi et al. paper."""
 
