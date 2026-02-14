@@ -402,8 +402,7 @@ def a_symmetric_avg(coeffs, round=None):
         means = np.around(means, round)
     return means
 
-
-if __name__ == "__main__":
+def _main():
     """Tests from the Choi et al. paper."""
 
     # Print out the K^2 a coefficients (symmetrically averaged) for the
@@ -419,3 +418,7 @@ if __name__ == "__main__":
     print("<0,0>, <1,0>, <1,1>, <2,0>, <2,1>, <2,2>:")
     print(a_symmetric_avg(K2a_out, round=4))
     print(np.around(np.fliplr(input_bfe_a), 4))
+
+
+if __name__ == "__main__":
+    _main()
