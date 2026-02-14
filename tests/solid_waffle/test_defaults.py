@@ -2,6 +2,7 @@
 
 import numpy as np
 from solid_waffle.flat_simulator.detector_functions import (
+    _main,
     K2a,
     TestKernels,
     a_symmetric_avg,
@@ -31,3 +32,5 @@ def test_defaults():
 
     print(np.fliplr(input_bfe_a))
     assert np.abs(np.fliplr(input_bfe_a)[3, 0] + 0.0083) < 1.0e-4
+
+    _main()
