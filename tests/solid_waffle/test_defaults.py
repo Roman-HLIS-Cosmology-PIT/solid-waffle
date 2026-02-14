@@ -2,9 +2,9 @@
 
 import numpy as np
 from solid_waffle.flat_simulator.detector_functions import (
-    _main,
     K2a,
     TestKernels,
+    _main,
     a_symmetric_avg,
     auto_convolve_kernel,
     ipc_kernel_HV,
