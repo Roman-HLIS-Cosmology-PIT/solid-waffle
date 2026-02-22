@@ -89,5 +89,3 @@ def test_histogram2(tmp_path):
     data = np.loadtxt(outfile).astype(np.int32)
     diff = data[2555:2566, 2] - np.array([1028, 1076, 884, 1016, 660, 0, 2308, 1068, 992, 1188, 1160], dtype=np.int32)
     assert np.all(np.abs(diff) <= 1)
-
-test_histogram2("temp")
