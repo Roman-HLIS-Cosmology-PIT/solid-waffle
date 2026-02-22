@@ -121,4 +121,3 @@ def test_histogram2(tmp_path):
         assert diff[0] == -65536  # will fail
     except FileNotFoundError as fnfe:
         assert str(fnfe)[:19] == "Failed to find file"
-
