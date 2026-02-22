@@ -102,4 +102,4 @@ def test_histogram2(tmp_path):
         histograms_main(["oops"])
         assert diff[0] == -65536  # will fail
     except ValueError as ve:
-        str(ve)[:13] == "histograms.py"
+        assert str(ve)[:13] == "histograms.py"
