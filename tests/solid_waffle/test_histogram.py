@@ -53,6 +53,15 @@ def test_histogram(tmp_path):
     )
     assert np.all(np.abs(diff) <= 1)
 
+    # try filenotfound error
+    try:
+        histograms_main(
+            [None, "-f", "1", "-i", str(tmp_path) + "/20260220T_001.fits", "-o", outfile, "-n", str(N + 1)]
+        )
+        assert diff[0] == -65536  # will fail
+    except FileNotFoundError as fnfe:
+        assert str(fnfe)[:19] == "Failed to find file"
+
 
 def test_histogram2(tmp_path):
     """

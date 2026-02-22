@@ -69,7 +69,7 @@ def main(argv):
                 count += 1
                 thisname = prefix + f"/{stamp+count:d}" + body + f"_{k+1:03d}.fits"
                 if count == 10000:
-                    raise FileNotFoundError("Failed to find file", k)
+                    raise FileNotFoundError("Failed to find file " + str(k))
             filelist.append(thisname)
     elif m2:
         prefix = m2.group(1)
@@ -77,6 +77,8 @@ def main(argv):
         filelist = []
         for k in range(nfile):
             thisname = prefix + "/" + body + f"_{k+1:03d}.fits"
+            if not path.exists(thisname):
+                raise FileNotFoundError("Failed to find file " + str(k))
             filelist.append(thisname)
     else:
         raise ValueError("Match failed.")
