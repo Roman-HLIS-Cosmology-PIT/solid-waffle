@@ -15,13 +15,25 @@ def main(argv):
     ----------
     argv : list of str
         Arguments, in the form of a list:
-        ``[-f, <format>, -i, <1st input file>, -o, <output file>, -n, <number of files>]``.
+        ``[<unused>, -f, <format>, -i, <1st input file>, -o, <output file>, -n, <number of files>]``.
 
     Returns
     -------
     None
 
+    Notes
+    -----
+    The function tries a few ways to make the list of input files. In order of priority:
+
+    - DCL method: the file is of the form ``directory + "/" + datestamp + body + "_001.fits"``,
+      where the datestamp is 8 digits (``YYYYMMDD``) and the body is a string. The function will
+      search for the next date if it can't find the file by incrementing the "_001.fits".
+
+    - General method: the file is of the form ``directory + "/" + body + "_001.fits"``,
+      where the file number (starting with 001) is incremented.
+
     """
+
     if len(argv) == 1:
         print(
             "Calling format: python histograms.py "
@@ -44,24 +56,32 @@ def main(argv):
 
     # Get array of new files:
     m = re.search(r"^(.+)/(\d\d\d\d\d\d\d\d)([^/]+)\_(\d+).fits", infile)
+    m2 = re.search(r"^(.+)/([^/]+)\_(\d+).fits", infile)
     if m:
         prefix = m.group(1)
         stamp = int(m.group(2))
         body = m.group(3)
+        filelist = []
+        for k in range(nfile):
+            thisname = prefix + f"/{stamp:d}" + body + f"_{k+1:03d}.fits"
+            count = 0
+            while not path.exists(thisname):
+                count += 1
+                thisname = prefix + f"/{stamp+count:d}" + body + f"_{k+1:03d}.fits"
+                if count == 10000:
+                    print("Failed to find file", k)
+                    exit()
+            filelist.append(thisname)
+    elif m2:
+        prefix = m2.group(1)
+        body = m2.group(2)
+        filelist = []
+        for k in range(nfile):
+            thisname = prefix + "/" + body + f"_{k+1:03d}.fits"
+            filelist.append(thisname)
     else:
         print("Match failed.")
         exit()
-    filelist = []
-    for k in range(nfile):
-        thisname = prefix + f"/{stamp:d}" + body + f"_{k+1:03d}.fits"
-        count = 0
-        while not path.exists(thisname):
-            count += 1
-            thisname = prefix + f"/{stamp+count:d}" + body + f"_{k+1:03d}.fits"
-            if count == 10000:
-                print("Failed to find file", k)
-                exit()
-        filelist.append(thisname)
 
     nside = pyirc.get_nside(fileformat)
     ntslice = pyirc.get_num_slices(fileformat, filelist[0])
