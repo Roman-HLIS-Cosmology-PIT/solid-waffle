@@ -103,3 +103,22 @@ def test_histogram2(tmp_path):
         assert diff[0] == -65536  # will fail
     except ValueError as ve:
         assert str(ve)[:13] == "histograms.py"
+
+    # try another value error
+    try:
+        histograms_main(
+            [None, "-f", "1", "-i", str(tmp_path) + "/oops.doesnt.exist", "-o", outfile, "-n", str(N + 1)]
+        )
+        assert diff[0] == -65536  # will fail
+    except ValueError as ve:
+        assert str(ve) == "Match failed."
+
+    # try filenotfound error
+    try:
+        histograms_main(
+            [None, "-f", "1", "-i", str(tmp_path) + "/myfile_001.fits", "-o", outfile, "-n", str(N + 1)]
+        )
+        assert diff[0] == -65536  # will fail
+    except FileNotFoundError as fnfe:
+        assert str(fnfe)[:19] == "Failed to find file"
+
