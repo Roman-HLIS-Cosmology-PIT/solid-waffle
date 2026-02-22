@@ -96,3 +96,10 @@ def test_histogram2(tmp_path):
         [1028, 1076, 884, 1016, 660, 0, 2308, 1068, 992, 1188, 1160], dtype=np.int32
     )
     assert np.all(np.abs(diff) <= 1)
+
+    # try value error
+    try:
+        histograms_main(["oops"])
+        assert diff[0] == -65536  # will fail
+    except ValueError as ve:
+        str(ve)[:13] == "histograms.py"

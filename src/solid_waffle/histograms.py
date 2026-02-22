@@ -39,7 +39,7 @@ def main(argv):
             "Calling format: python histograms.py "
             "-f <format> -i <1st input file> -o <output file> -n <number of files>"
         )
-        exit()
+        raise ValueError("histograms.py called with no arguments.")
 
     # get command line directives
     for i in range(1, len(argv)):
@@ -69,8 +69,7 @@ def main(argv):
                 count += 1
                 thisname = prefix + f"/{stamp+count:d}" + body + f"_{k+1:03d}.fits"
                 if count == 10000:
-                    print("Failed to find file", k)
-                    exit()
+                    raise FileNotFoundError("Failed to find file", k)
             filelist.append(thisname)
     elif m2:
         prefix = m2.group(1)
@@ -80,8 +79,7 @@ def main(argv):
             thisname = prefix + "/" + body + f"_{k+1:03d}.fits"
             filelist.append(thisname)
     else:
-        print("Match failed.")
-        exit()
+        raise ValueError("Match failed.")
 
     nside = pyirc.get_nside(fileformat)
     ntslice = pyirc.get_num_slices(fileformat, filelist[0])
