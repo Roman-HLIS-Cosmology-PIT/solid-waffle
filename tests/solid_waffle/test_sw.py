@@ -1,9 +1,11 @@
-import numpy as np
 import asdf
+import numpy as np
+import os
 from astropy.io import fits
+from solid_waffle.asdf_to_fits import main as convert_asdf_to_fits_main
 from solid_waffle.correlation_run import run_ir_all
 from solid_waffle.flat_simulator import simulate_flat
-from solid_waffle.asdf_to_fits import main as convert_asdf_to_fits_main
+
 
 
 def create_dummy_asdf(asdf_path, data_type="flat", shape=(512, 512)):
