@@ -1,6 +1,71 @@
 import numpy as np
+import sys
+import os
+from astropy.io import fits
 from solid_waffle.correlation_run import run_ir_all
 from solid_waffle.flat_simulator import simulate_flat
+from solid_waffle.asdf_to_fits import main as convert_asdf_to_fits_main
+
+
+def create_dummy_asdf(asdf_path, data_type="flat", shape=(512, 512)):
+    """
+    Create a minimal ASDF file representing a flat or dark.
+    """
+    if data_type == "flat":
+        # Simulate bright flat
+        data = 300 + np.random.normal(0, 5, size=shape)
+    else:
+        # Simulate dark
+        data = np.random.normal(0, 1, size=shape)
+    tree = {"roman": {"data": data}}
+    with asdf.AsdfFile(tree) as af:
+        af.write_to(asdf_path)
+
+def test_asdf_to_fits(tmp_path):
+    """
+    Test converting multiple ASDF files (flats and darks) to FITS.
+    """
+    # Create dummy ASDF files
+    for i in range(2):
+        create_dummy_asdf(tmp_path / f"flat_{i+1:03d}.asdf", data_type="flat")
+    for i in range(2):
+        create_dummy_asdf(tmp_path / f"dark_{i+1:03d}.asdf", data_type="dark")
+
+    # Change working directory to tmp_path to mimic main()
+    orig_cwd = os.getcwd()
+    os.chdir(tmp_path)
+
+    try:
+        # Run your conversion code
+        convert_asdf_to_fits_main()
+
+        # The output directory should exist
+        output_dir = tmp_path.parent / (tmp_path.name + "_fits_converted")
+        assert output_dir.exists()
+
+        # All FITS files should exist
+        expected_files = [
+            output_dir / "flat_001_asdf_to.fits",
+            output_dir / "flat_002_asdf_to.fits",
+            output_dir / "dark_001_asdf_to.fits",
+            output_dir / "dark_002_asdf_to.fits",
+        ]
+        for f in expected_files:
+            assert f.exists()
+            # Load and verify data
+            with fits.open(f) as hdul:
+                data = hdul[0].data
+                assert data.shape == (512, 512)
+                assert data.dtype == np.uint16
+                # Optionally, check values roughly match expected ranges
+                if "flat" in f.name:
+                    assert np.mean(data) > 250
+                else:
+                    assert np.mean(data) < 10
+
+    finally:
+        os.chdir(orig_cwd)
+
 
 
 def test_run(tmp_path):
