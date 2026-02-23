@@ -8,7 +8,6 @@ from solid_waffle.correlation_run import run_ir_all
 from solid_waffle.flat_simulator import simulate_flat
 
 
-
 def create_dummy_asdf(asdf_path, data_type="flat", frames=3, shape=(512, 512)):
     """
     Create test dummy asdf files for test
@@ -19,11 +18,10 @@ def create_dummy_asdf(asdf_path, data_type="flat", frames=3, shape=(512, 512)):
     else:
         # darks
         data = np.random.normal(0, 5, size=(frames, *shape))
-    
     tree = {"roman": {"data": (data)}}
-    
     with asdf.AsdfFile(tree) as af:
         af.write_to(asdf_path)
+
 
 def test_asdf_to_fits(tmp_path):
     """
@@ -69,7 +67,6 @@ def test_asdf_to_fits(tmp_path):
 
     finally:
         os.chdir(orig_cwd)
-
 
 
 def test_run(tmp_path):
