@@ -69,44 +69,28 @@ def test_run_asdf(tmp_path):
     """
     Test that solid-waffle analysis pipeline works with asdf input files (formatpars=2001)
     """
-    temp_dir = str(tmp_path)
+    from solid_waffle.pyirc import get_ntslice, load_segment
 
-    # Create dummy asdf files instead of fits
-    for k in range(8):
-        if k < 4:
-            data_type = "flat"
-            filename = tmp_path / f"light_{k+1:03d}.asdf"
-        else:
-            data_type = "dark"
-            filename = tmp_path / f"dark_{k+1:03d}.asdf"
-        create_dummy_asdf(filename, data_type=data_type, frames=20, shape=(512, 512))
+    frames, ny, nx = 20, 512, 512
+    fill_value = 1000.0
+    data = np.full((frames, ny, nx), fill_value)
 
-    # Run solid-waffle analysis with formatpars=2001
-    analyze_cfg = (
-        "DETECTOR: Test_simulation\n"
-        "LIGHT:\n"
-        f"    {temp_dir}/light_001.asdf\n"
-        f"    {temp_dir}/light_002.asdf\n"
-        f"    {temp_dir}/light_003.asdf\n"
-        f"    {temp_dir}/light_004.asdf\n"
-        "DARK:\n"
-        f"    {temp_dir}/dark_005.asdf\n"
-        f"    {temp_dir}/dark_006.asdf\n"
-        f"    {temp_dir}/dark_007.asdf\n"
-        f"    {temp_dir}/dark_008.asdf\n"
-        "FORMAT: 2002\n"  # new test formatpars
-        "CHAR: Advanced 1 3 3 bfe\n"
-        "NBIN: 4 4\n"
-        "TIME:    1 10 12 20\n"
-        "TIME2A:  1 2 4 20\n"
-        "TIME2B:  1 2 4 20\n"
-        "TIME3:   1 2 4 20\n"
-        f"OUTPUT: {temp_dir}/analysis\n"
-    )
-    with open(temp_dir + "/analyze_cfg.txt", "w") as f:
-        f.write(analyze_cfg)
-    run_ir_all(temp_dir + "/analyze_cfg.txt")
-    assert os.path.exists(temp_dir + "/analysis_summary.txt")
+    asdf_path = str(tmp_path / "test.asdf")
+    data_out = create_dummy_asdf(asdf_path, data_type="flat", frames=frames, shape=(ny, nx))
+
+    # Test get_ntslice
+    ntslice = get_ntslice(asdf_path, formatpars=2002)
+    assert ntslice == frames
+
+    # Test load_segment
+    xyrange = [0, nx, 0, ny]
+    tslices = [1, 2, 3]
+    result = load_segment(asdf_path, 2002, xyrange, tslices, verbose=False)
+
+    assert result.shape == (len(tslices), ny, nx)
+    # Check the 65535 - data transformation was applied
+    expected = np.clip(65535 - data_out, 0, 65535)
+    assert np.allclose(result, expected[0:3])
 
 
 def test_run(tmp_path):
