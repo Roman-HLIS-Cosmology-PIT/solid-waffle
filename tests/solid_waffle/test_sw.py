@@ -107,11 +107,7 @@ def test_run_asdf(tmp_path):
     )
     with open(temp_dir + "/analyze_cfg.txt", "w") as f:
         f.write(analyze_cfg)
-    
-    # This will actually run solid-waffle with asdf files
     run_ir_all(temp_dir + "/analyze_cfg.txt")
-
-    # Check the analysis output was produced
     assert os.path.exists(temp_dir + "/analysis_summary.txt")
 
 
