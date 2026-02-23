@@ -26,7 +26,7 @@ def main():
             print(f"Skipping (already exists): {new_file_path}")
             continue
         with asdf.open(fn) as f:
-            fits.PrimaryHDU(f["roman"]["data"].value.astype(np.uint16)).writeto(new_file_path, overwrite=True)
+            fits.PrimaryHDU(np.asarray(f["roman"]["data"]).astype(np.uint16)).writeto(new_file_path, overwrite=True)
 
 
 if __name__ == "__main__":
