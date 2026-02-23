@@ -1,6 +1,5 @@
 import numpy as np
-import sys
-import os
+import asdf
 from astropy.io import fits
 from solid_waffle.correlation_run import run_ir_all
 from solid_waffle.flat_simulator import simulate_flat
