@@ -2,7 +2,6 @@ import os
 
 import asdf
 import numpy as np
-from asdf import NDArray
 from astropy.io import fits
 from solid_waffle.asdf_to_fits import main as convert_asdf_to_fits_main
 from solid_waffle.correlation_run import run_ir_all
@@ -18,7 +17,7 @@ def create_dummy_asdf(asdf_path, data_type="flat", frames=3, shape=(512, 512)):
         # darks
         data = np.random.normal(0, 5, size=(frames, *shape))
     
-    tree = {"roman": {"data": NDArray(data)}}
+    tree = {"roman": {"data": (data)}}
     
     with asdf.AsdfFile(tree) as af:
         af.write_to(asdf_path)
