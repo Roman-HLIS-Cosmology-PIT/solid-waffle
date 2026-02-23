@@ -8,14 +8,15 @@ from solid_waffle.correlation_run import run_ir_all
 from solid_waffle.flat_simulator import simulate_flat
 
 
-def create_dummy_asdf(asdf_path, data_type="flat", frames=3, shape=(512, 512)):
+def create_dummy_asdf(asdf_path, data_type="flat", frames=20, shape=(512, 512)):
     """
     Create dummy asdf files similar to flats and darks
     """
+    rng = np.random.default_rng(42)  # fixed seed
     if data_type == "flat":
-        data = np.full((frames, *shape), 3000, dtype=np.float64)
+        data = 3000 + rng.normal(0, 50, size=(frames, *shape))
     else:
-        data = np.full((frames, *shape), 5, dtype=np.float64)
+        data = rng.normal(0, 5, size=(frames, *shape))
     tree = {"roman": {"data": data}}
     with asdf.AsdfFile(tree) as af:
         af.write_to(asdf_path)
@@ -26,25 +27,23 @@ def test_asdf_to_fits(tmp_path):
     """
     Test converting multiple ASDF files (flats and darks) to FITS.
     """
-    # Create dummy ASDF files
+    original_data = {}
     for i in range(2):
-        create_dummy_asdf(tmp_path / f"flat_{i+1:03d}.asdf", data_type="flat")
+        data = create_dummy_asdf(tmp_path / f"flat_{i+1:03d}.asdf", data_type="flat")
+        original_data[f"flat_{i+1:03d}"] = np.clip(data, 0, 65535).astype(np.uint16)
     for i in range(2):
-        create_dummy_asdf(tmp_path / f"dark_{i+1:03d}.asdf", data_type="dark")
+        data = create_dummy_asdf(tmp_path / f"dark_{i+1:03d}.asdf", data_type="dark")
+        original_data[f"dark_{i+1:03d}"] = np.clip(data, 0, 65535).astype(np.uint16)
 
-    # Change working directory to tmp_path to mimic main()
     orig_cwd = os.getcwd()
     os.chdir(tmp_path)
 
     try:
-        # Run your conversion code
         convert_asdf_to_fits_main()
 
-        # The output directory should exist
         output_dir = tmp_path.parent / (tmp_path.name + "_fits_converted")
         assert output_dir.exists()
 
-        # All FITS files should exist
         expected_files = [
             output_dir / "flat_001_asdf_to.fits",
             output_dir / "flat_002_asdf_to.fits",
@@ -52,16 +51,14 @@ def test_asdf_to_fits(tmp_path):
             output_dir / "dark_002_asdf_to.fits",
         ]
         for f in expected_files:
-            assert f.exists()
-            # Load and verify data
+            assert f.exists(), f"Missing file: {f.name}"
             with fits.open(f) as hdul:
                 data = hdul[0].data
-                assert data.shape == (3, 512, 512)
+                assert data.shape == (20, 512, 512)
                 assert data.dtype == np.uint16
-                if "flat" in f.name:
-                    assert np.all(data == 3000)
-                else:
-                    assert np.all(data == 5)
+                # Now we can check actual values match original!
+                key = f.name.replace("_asdf_to.fits", "")
+                assert np.all(data == original_data[key])
 
     finally:
         os.chdir(orig_cwd)
