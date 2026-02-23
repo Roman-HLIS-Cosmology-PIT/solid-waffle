@@ -143,6 +143,8 @@ def get_nside(formatpars):
     # Test configurations
     if formatpars == 1001:
         return 512
+    if formatpars == 2002:
+        return 512
 
     # asdf files
     if formatpars == 2001:
@@ -181,7 +183,7 @@ def get_num_slices(formatpars, filename):
         hdus = fits.open(filename)
         ntslice = int(hdus[1].header["NAXIS3"])
         hdus.close()
-    elif formatpars == 2001:
+    elif formatpars == 2001 or formatpars == 2002:
         af = asdf.open(filename)
         ntslice = np.shape(af["roman"]["data"])[0]
         af.close()
@@ -321,7 +323,7 @@ def load_segment(filename, formatpars, xyrange, tslices, verbose):
         else:
             print("Error: non-fitsio methods not yet supported for formatpars=6")
             exit()
-    elif formatpars == 2001:
+    elif formatpars == 2001 or formatpars == 2002:
         fileh = asdf.open(filename)
         _ = get_nside(formatpars)  # might need in the future
         for ts in range(ntslice_use):

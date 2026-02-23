@@ -96,7 +96,7 @@ def test_run_asdf(tmp_path):
         f"    {temp_dir}/dark_006.asdf\n"
         f"    {temp_dir}/dark_007.asdf\n"
         f"    {temp_dir}/dark_008.asdf\n"
-        "FORMAT: 2001\n"  # <-- this is the key difference!
+        "FORMAT: 2002\n"  # new test formatpars
         "CHAR: Advanced 1 3 3 bfe\n"
         "NBIN: 4 4\n"
         "TIME:    1 10 12 20\n"
