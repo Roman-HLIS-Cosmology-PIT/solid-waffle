@@ -1,8 +1,8 @@
 import os
 
 import asdf
-from asdf.array import NDArray
 import numpy as np
+from asdf.array import NDArray
 from astropy.io import fits
 from solid_waffle.asdf_to_fits import main as convert_asdf_to_fits_main
 from solid_waffle.correlation_run import run_ir_all
