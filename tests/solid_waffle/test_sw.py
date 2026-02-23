@@ -10,6 +10,9 @@ from solid_waffle.flat_simulator import simulate_flat
 
 
 def create_dummy_asdf(asdf_path, data_type="flat", frames=3, shape=(512, 512)):
+    """
+    Create test dummy asdf files for test
+    """
     if data_type == "flat":
         # flats
         data = 3000 + np.random.normal(0, 50, size=(frames, *shape))
