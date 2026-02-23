@@ -9,6 +9,9 @@ from solid_waffle.flat_simulator import simulate_flat
 
 
 def create_dummy_asdf(asdf_path, data_type="flat", frames=3, shape=(512, 512)):
+    """
+    Create dummy asdf files similar to flats and darks
+    """
     if data_type == "flat":
         data = np.full((frames, *shape), 3000, dtype=np.float64)
     else:
