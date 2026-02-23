@@ -59,7 +59,7 @@ def test_asdf_to_fits(tmp_path):
             # Load and verify data
             with fits.open(f) as hdul:
                 data = hdul[0].data
-                assert data.shape == (512, 512)
+                assert data.shape == (3, 512, 512)
                 assert data.dtype == np.uint16
                 # Optionally, check values roughly match expected ranges
                 if "flat" in f.name:
