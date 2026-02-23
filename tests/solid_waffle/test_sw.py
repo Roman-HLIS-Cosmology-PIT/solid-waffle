@@ -1,7 +1,7 @@
 import os
 
 import asdf
-from asdf import NDArray
+from asdf.array import NDArray
 import numpy as np
 from astropy.io import fits
 from solid_waffle.asdf_to_fits import main as convert_asdf_to_fits_main
