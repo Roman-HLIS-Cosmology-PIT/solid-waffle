@@ -19,6 +19,7 @@ def create_dummy_asdf(asdf_path, data_type="flat", frames=3, shape=(512, 512)):
     tree = {"roman": {"data": data}}
     with asdf.AsdfFile(tree) as af:
         af.write_to(asdf_path)
+    return data
 
 
 def test_asdf_to_fits(tmp_path):
@@ -64,6 +65,54 @@ def test_asdf_to_fits(tmp_path):
 
     finally:
         os.chdir(orig_cwd)
+
+
+def test_run_asdf(tmp_path):
+    """
+    Test that solid-waffle analysis pipeline works with asdf input files (formatpars=2001)
+    """
+    temp_dir = str(tmp_path)
+
+    # Create dummy asdf files instead of fits
+    for k in range(8):
+        if k < 4:
+            data_type = "flat"
+            filename = tmp_path / f"light_{k+1:03d}.asdf"
+        else:
+            data_type = "dark"
+            filename = tmp_path / f"dark_{k+1:03d}.asdf"
+        create_dummy_asdf(filename, data_type=data_type, frames=20, shape=(512, 512))
+
+    # Run solid-waffle analysis with formatpars=2001
+    analyze_cfg = (
+        "DETECTOR: Test_simulation\n"
+        "LIGHT:\n"
+        f"    {temp_dir}/light_001.asdf\n"
+        f"    {temp_dir}/light_002.asdf\n"
+        f"    {temp_dir}/light_003.asdf\n"
+        f"    {temp_dir}/light_004.asdf\n"
+        "DARK:\n"
+        f"    {temp_dir}/dark_005.asdf\n"
+        f"    {temp_dir}/dark_006.asdf\n"
+        f"    {temp_dir}/dark_007.asdf\n"
+        f"    {temp_dir}/dark_008.asdf\n"
+        "FORMAT: 2001\n"  # <-- this is the key difference!
+        "CHAR: Advanced 1 3 3 bfe\n"
+        "NBIN: 4 4\n"
+        "TIME:    1 10 12 20\n"
+        "TIME2A:  1 2 4 20\n"
+        "TIME2B:  1 2 4 20\n"
+        "TIME3:   1 2 4 20\n"
+        f"OUTPUT: {temp_dir}/analysis\n"
+    )
+    with open(temp_dir + "/analyze_cfg.txt", "w") as f:
+        f.write(analyze_cfg)
+    
+    # This will actually run solid-waffle with asdf files
+    run_ir_all(temp_dir + "/analyze_cfg.txt")
+
+    # Check the analysis output was produced
+    assert os.path.exists(temp_dir + "/analysis_summary.txt")
 
 
 def test_run(tmp_path):
