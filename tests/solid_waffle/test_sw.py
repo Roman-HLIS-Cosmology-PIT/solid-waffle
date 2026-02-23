@@ -9,16 +9,11 @@ from solid_waffle.flat_simulator import simulate_flat
 
 
 def create_dummy_asdf(asdf_path, data_type="flat", frames=3, shape=(512, 512)):
-    """
-    Create test dummy asdf files for test
-    """
     if data_type == "flat":
-        # flats
-        data = 3000 + np.random.normal(0, 50, size=(frames, *shape))
+        data = np.full((frames, *shape), 3000, dtype=np.float64)
     else:
-        # darks
-        data = np.random.normal(0, 5, size=(frames, *shape))
-    tree = {"roman": {"data": (data)}}
+        data = np.full((frames, *shape), 5, dtype=np.float64)
+    tree = {"roman": {"data": data}}
     with asdf.AsdfFile(tree) as af:
         af.write_to(asdf_path)
 
@@ -59,11 +54,10 @@ def test_asdf_to_fits(tmp_path):
                 data = hdul[0].data
                 assert data.shape == (3, 512, 512)
                 assert data.dtype == np.uint16
-                # Optionally, check values roughly match expected ranges
                 if "flat" in f.name:
-                    assert np.mean(data) > 250
+                    assert np.all(data == 3000)  # every single value should be 3000
                 else:
-                    assert np.mean(data) < 10
+                    assert np.all(data == 5)     # every single value should be 5
 
     finally:
         os.chdir(orig_cwd)
