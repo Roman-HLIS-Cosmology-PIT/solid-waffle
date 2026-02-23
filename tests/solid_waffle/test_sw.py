@@ -16,7 +16,8 @@ def create_dummy_asdf(asdf_path, data_type="flat", frames=20, shape=(512, 512)):
     if data_type == "flat":
         data = 3000 + rng.normal(0, 50, size=(frames, *shape))
     else:
-        data = rng.normal(0, 5, size=(frames, *shape))
+        data = 100 + rng.normal(0, 5, size=(frames, *shape))
+    data = np.clip(data, 0, 65535)
     tree = {"roman": {"data": data}}
     with asdf.AsdfFile(tree) as af:
         af.write_to(asdf_path)
