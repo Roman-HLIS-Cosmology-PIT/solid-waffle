@@ -10,17 +10,16 @@ from solid_waffle.flat_simulator import simulate_flat
 
 
 
-def create_dummy_asdf(asdf_path, data_type="flat", shape=(512, 512)):
-    """
-    Create a minimal ASDF file representing a flat or dark.
-    """
+def create_dummy_asdf(asdf_path, data_type="flat", frames=3, shape=(512, 512)):
     if data_type == "flat":
-        # Simulate bright flat
-        data = 300 + np.random.normal(0, 5, size=shape)
+        # flats
+        data = 3000 + np.random.normal(0, 50, size=(frames, *shape))
     else:
-        # Simulate dark
-        data = np.random.normal(0, 1, size=shape)
+        # darks
+        data = np.random.normal(0, 5, size=(frames, *shape))
+    
     tree = {"roman": {"data": NDArray(data)}}
+    
     with asdf.AsdfFile(tree) as af:
         af.write_to(asdf_path)
 
