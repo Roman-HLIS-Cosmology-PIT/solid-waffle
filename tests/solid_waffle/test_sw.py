@@ -19,7 +19,7 @@ def create_dummy_asdf(asdf_path, data_type="flat", shape=(512, 512)):
     else:
         # Simulate dark
         data = np.random.normal(0, 1, size=shape)
-    tree = {"roman": {"data": data}}
+    tree = {"roman": {"data": NDArray(data)}}
     with asdf.AsdfFile(tree) as af:
         af.write_to(asdf_path)
 
