@@ -55,9 +55,9 @@ def test_asdf_to_fits(tmp_path):
                 assert data.shape == (3, 512, 512)
                 assert data.dtype == np.uint16
                 if "flat" in f.name:
-                    assert np.all(data == 3000)  # every single value should be 3000
+                    assert np.all(data == 3000)
                 else:
-                    assert np.all(data == 5)     # every single value should be 5
+                    assert np.all(data == 5)
 
     finally:
         os.chdir(orig_cwd)
