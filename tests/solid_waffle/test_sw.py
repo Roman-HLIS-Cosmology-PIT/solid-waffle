@@ -17,7 +17,7 @@ def create_dummy_asdf(asdf_path, data_type="flat", frames=20, shape=(512, 512)):
     ----------
     asdf_path : str or pathlib.Path
         Path to the file which will be created
-    data_type : str 
+    data_type : str
         Type of file to be simulated - "dark" or "flat"
     frames : int
         number of frames in simulated asdf file. Default is 20
