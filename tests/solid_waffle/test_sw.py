@@ -79,7 +79,7 @@ def test_run_asdf(tmp_path):
     data_out = create_dummy_asdf(asdf_path, data_type="flat", frames=frames, shape=(ny, nx))
 
     # Test get_num_slices
-    ntslice = get_num_slices(formatpars=2002, asdf_path)
+    ntslice = get_num_slices(2002, asdf_path)
     assert ntslice == frames
 
     # Test load_segment
