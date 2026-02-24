@@ -54,7 +54,5 @@ def main():
     mcf.hotpix_plots()
 
 
-
 if __name__ == "__main__":
     main()
-    

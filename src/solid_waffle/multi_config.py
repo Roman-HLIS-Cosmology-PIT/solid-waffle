@@ -21,20 +21,20 @@ from solid_waffle.correlation_run import Config
 
 _ALLOWED_TO_DIFFER = frozenset(
     [
-    "lightfiles",
-    "darkfiles",
-    "outstem",
-    "vislightfiles",
-    "visdarkfiles",
-    "full_info",
-    "is_good",
-    "lightref",
-    "darkref",
-    "NTMAX",
-    "mean_full_info",
-    "std_full_info",
-    "nlfit",
-    "nlder"
+        "lightfiles",
+        "darkfiles",
+        "outstem",
+        "vislightfiles",
+        "visdarkfiles",
+        "full_info",
+        "is_good",
+        "lightref",
+        "darkref",
+        "NTMAX",
+        "mean_full_info",
+        "std_full_info",
+        "nlfit",
+        "nlder"
     ]
 )
 
