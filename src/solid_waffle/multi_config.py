@@ -42,7 +42,7 @@ _ALLOWED_TO_DIFFER = frozenset(
 def _values_match(a, b):
     if isinstance(a, np.ndarray):
         return np.array_equal(a, b)
-    if hasattr(a, '__dict__'):
+    if hasattr(a, "__dict__"):
         return a.__dict__ == b.__dict__
     else:
         return a == b
