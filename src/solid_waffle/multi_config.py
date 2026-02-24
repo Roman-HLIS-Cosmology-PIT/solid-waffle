@@ -167,7 +167,7 @@ class MultiConfig(Config):
         for cfg in instance.configs:
             summary_path = cfg.outstem + "_summary.txt"
             data = np.loadtxt(summary_path)
-            cfg.full_info = data[:, 2:cfg.ski.N+2].reshape(cfg.ny, cfg.nx, cfg.swi.N)
+            cfg.full_info = data[:, 2 : cfg.ski.N + 2].reshape(cfg.ny, cfg.nx, cfg.swi.N)
             cfg.is_good = np.where(cfg.full_info[:, :, cfg.swi.g] > 1e-49, 1, 0)
         instance._combine_results()
         return instance
