@@ -29,7 +29,7 @@ Output
 """
 import argparse
 
-from multi_config import MultiConfig
+from solid_waffle.multi_config import MultiConfig
 
 
 def main():

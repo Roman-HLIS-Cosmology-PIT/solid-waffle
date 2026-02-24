@@ -34,7 +34,7 @@ _ALLOWED_TO_DIFFER = frozenset(
         "mean_full_info",
         "std_full_info",
         "nlfit",
-        "nlder"
+        "nlder",
     ]
 )
 
