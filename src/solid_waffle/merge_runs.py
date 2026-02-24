@@ -33,6 +33,13 @@ from solid_waffle.multi_config import MultiConfig
 
 
 def main():
+    """
+    Aggregate already-completed run_ir_all outputs into one combined result.
+
+    Reads command line arguments for config file paths and optional output
+    stem, loads results from existing _summary.txt files, and writes
+    combined outputs.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("config_files", nargs="+")
     parser.add_argument("--outstem", default=None)
