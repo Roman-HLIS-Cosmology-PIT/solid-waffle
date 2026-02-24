@@ -28,7 +28,9 @@ Output
     <outstem>_nl.txt        combined non-linearity table
 """
 import argparse
+
 from multi_config import MultiConfig
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -55,3 +57,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    

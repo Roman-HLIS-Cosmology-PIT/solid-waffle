@@ -16,9 +16,11 @@ _values_match
 """
 
 import numpy as np
+
 from solid_waffle.correlation_run import Config
 
-_ALLOWED_TO_DIFFER = frozenset([
+_ALLOWED_TO_DIFFER = frozenset(
+    [
     "lightfiles",
     "darkfiles",
     "outstem",
@@ -33,7 +35,8 @@ _ALLOWED_TO_DIFFER = frozenset([
     "std_full_info",
     "nlfit",
     "nlder"
-    ])
+    ]
+)
 
 def _values_match(a, b):
     if isinstance(a, np.ndarray):
@@ -41,13 +44,13 @@ def _values_match(a, b):
     else:
         return a == b
 
+
 class MultiConfig(Config):
     """
     Aggregates multiple completed IR characterization runs into one.
 
     Inherits all attributes and methods from Config. See Config docstring
-    for full details of inherited attributes and methods. Only new or
-    modified attributes and methods are documented here.
+    for full details of inherited attributes and methods.
 
     Parameters
     ----------
@@ -58,34 +61,13 @@ class MultiConfig(Config):
     verbose : bool, optional
         Print progress and mismatch details.
 
-    Attributes
-    ----------
-    configs : list of Config
-        The individual Config objects, one per input file.
-    full_info : np.ndarray
-        Average of full_info across all runs, shape = (ny, nx, swi.N).
-        Overrides the Config attribute of the same name.
-    is_good : np.ndarray
-        Combined good-pixel map, shape = (ny, nx). A super-pixel is good
-        only if it is good in every run. Overrides the Config attribute.
-
-    Methods
-    -------
-    __init__
-        Constructor. Loads configs, checks settings match, combines results.
-    _combine_results
-        Stacks and averages full_info arrays across runs. Builds intersection
-        good-pixel map.
-    from_summaries
-        Alternative constructor. Loads results from existing _summary.txt
-        files instead of recomputing them.
-
     Raises
     ------
     ValueError
         If fewer than two config files are supplied, or if any configuration
         mismatch is found between runs.
     """
+
     def __init__(self, config_files, visible_run=False, verbose=False):
         if len(config_files) < 2:
             raise ValueError(f"Need at least 2 config files, got {len(config_files)}")
@@ -186,7 +168,3 @@ class MultiConfig(Config):
             cfg.is_good = np.where(cfg.full_info[:, :, cfg.swi.g] > 1e-49, 1, 0)
         instance._combine_results()
         return instance
-
-
-
-
