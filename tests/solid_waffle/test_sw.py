@@ -73,7 +73,7 @@ def test_run_asdf(tmp_path):
 
     frames, ny, nx = 20, 512, 512
     fill_value = 1000.0
-    data = np.full((frames, ny, nx), fill_value)
+    np.full((frames, ny, nx), fill_value)
 
     asdf_path = str(tmp_path / "test.asdf")
     data_out = create_dummy_asdf(asdf_path, data_type="flat", frames=frames, shape=(ny, nx))
