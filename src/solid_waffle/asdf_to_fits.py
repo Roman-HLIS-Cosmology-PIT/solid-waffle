@@ -8,7 +8,16 @@ from astropy.io import fits
 
 def main():
     """
-    Convert all ASDF files in a directory to FITS files
+    Converts all asdf files in a directory to fits files in a new directory
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+
     """
     current_dir = os.getcwd()
     parent_dir = os.path.dirname(current_dir)

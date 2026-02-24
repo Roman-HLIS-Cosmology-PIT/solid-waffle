@@ -11,7 +11,24 @@ from solid_waffle.pyirc import get_num_slices, load_segment
 
 def create_dummy_asdf(asdf_path, data_type="flat", frames=20, shape=(512, 512)):
     """
-    Create dummy asdf files similar to flats and darks
+    Test function to make a 512x512 simulated asdf file.
+
+    Parameters
+    ----------
+    asdf_path : str or pathlib.Path
+        Path to the file which will be created
+    data_type : str 
+        Type of file to be simulated - "dark" or "flat"
+    frames : int
+        number of frames in simulated asdf file. Default is 20
+    shape : tuple (int, int)
+        shape of data array in simulated asdf file. Default is (512, 512)
+
+    Returns
+    -------
+    data : np.ndarray of float, shape (frames, shape[0], shape[1])
+        data stored in simulated asdf file
+
     """
     rng = np.random.default_rng(42)  # fixed seed
     if data_type == "flat":
@@ -27,7 +44,17 @@ def create_dummy_asdf(asdf_path, data_type="flat", frames=20, shape=(512, 512)):
 
 def test_asdf_to_fits(tmp_path):
     """
-    Test converting multiple ASDF files (flats and darks) to FITS.
+    Test function to convert directory of asdf files to fits files.
+
+    Parameters
+    ----------
+    tmp_path : str or pathlib.Path
+        Directory in which to run the test.
+
+    Returns
+    -------
+    None
+
     """
     original_data = {}
     for i in range(2):
@@ -58,7 +85,7 @@ def test_asdf_to_fits(tmp_path):
                 data = hdul[0].data
                 assert data.shape == (20, 512, 512)
                 assert data.dtype == np.uint16
-                # Now we can check actual values match original!
+                # check values against original
                 key = f.name.replace("_asdf_to.fits", "")
                 assert np.all(data == original_data[key])
 
@@ -68,7 +95,17 @@ def test_asdf_to_fits(tmp_path):
 
 def test_run_asdf(tmp_path):
     """
-    Test that solid-waffle analysis pipeline works with asdf input files (formatpars=2001)
+    Test function to run solid-waffle on a simulated asdf 512x512 file.
+
+    Parameters
+    ----------
+    tmp_path : str or pathlib.Path
+        Directory in which to run the test.
+
+    Returns
+    -------
+    None
+
     """
 
     frames, ny, nx = 20, 512, 512
