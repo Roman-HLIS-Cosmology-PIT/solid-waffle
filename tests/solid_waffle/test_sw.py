@@ -6,7 +6,8 @@ from astropy.io import fits
 from solid_waffle.asdf_to_fits import main as convert_asdf_to_fits_main
 from solid_waffle.correlation_run import run_ir_all
 from solid_waffle.flat_simulator import simulate_flat
-from solid_waffle.pyirc import get_num_slices, load_segment
+from solid_waffle.pyirc import get_num_slices
+from solid_waffle.pyirc import load_segment
 
 
 def create_dummy_asdf(asdf_path, data_type="flat", frames=20, shape=(512, 512)):
@@ -78,8 +79,8 @@ def test_run_asdf(tmp_path):
     asdf_path = str(tmp_path / "test.asdf")
     data_out = create_dummy_asdf(asdf_path, data_type="flat", frames=frames, shape=(ny, nx))
 
-    # Test get_ntslice
-    ntslice = get_ntslice(asdf_path, formatpars=2002)
+    # Test get_num_slices
+    ntslice = get_num_slices(asdf_path, formatpars=2002)
     assert ntslice == frames
 
     # Test load_segment
