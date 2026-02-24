@@ -4,10 +4,14 @@ Routines to run the infrared flat correlations.
 Classes
 -------
 MultiConfig
-    Inherits Config classs to extract configuration data from multiple configuration files. 
+    Aggregates multiple completed IR characterization runs into one.
 
 Functions
 ---------
+_values_match
+    Safely compares two values for equality, handling numpy arrays
+    and plain Python types correctly.
+
 
 """
 
@@ -38,6 +42,50 @@ def _values_match(a, b):
         return a == b
 
 class MultiConfig(Config):
+    """
+    Aggregates multiple completed IR characterization runs into one.
+
+    Inherits all attributes and methods from Config. See Config docstring
+    for full details of inherited attributes and methods. Only new or
+    modified attributes and methods are documented here.
+
+    Parameters
+    ----------
+    config_files : list of str
+        Paths to the individual configuration files (one per run).
+    visible_run : bool, optional
+        Passed through to each Config constructor.
+    verbose : bool, optional
+        Print progress and mismatch details.
+
+    Attributes
+    ----------
+    configs : list of Config
+        The individual Config objects, one per input file.
+    full_info : np.ndarray
+        Average of full_info across all runs, shape = (ny, nx, swi.N).
+        Overrides the Config attribute of the same name.
+    is_good : np.ndarray
+        Combined good-pixel map, shape = (ny, nx). A super-pixel is good
+        only if it is good in every run. Overrides the Config attribute.
+
+    Methods
+    -------
+    __init__
+        Constructor. Loads configs, checks settings match, combines results.
+    _combine_results
+        Stacks and averages full_info arrays across runs. Builds intersection
+        good-pixel map.
+    from_summaries
+        Alternative constructor. Loads results from existing _summary.txt
+        files instead of recomputing them.
+
+    Raises
+    ------
+    ValueError
+        If fewer than two config files are supplied, or if any configuration
+        mismatch is found between runs.
+    """
     def __init__(self, config_files, visible_run=False, verbose=False):
         if len(config_files) < 2:
             raise ValueError(f"Need at least 2 config files, got {len(config_files)}")
@@ -62,6 +110,16 @@ class MultiConfig(Config):
         self._combine_results()
 
     def _combine_results(self):
+        """
+        Combines full_info and is_good arrays across all runs.
+
+        Averages full_info across runs and builds an intersection good-pixel
+        map where a super-pixel is only good if it is good in every run.
+
+        Returns
+        -------
+        None
+        """
         all_info = np.stack([cfg.full_info for cfg in self.configs], axis=0)
         all_good = np.stack([cfg.is_good for cfg in self.configs], axis=0)
         combined_good = np.prod(all_good, axis=0)
@@ -72,6 +130,34 @@ class MultiConfig(Config):
 
     @classmethod
     def from_summaries(cls, config_files, visible_run=False, verbose=False):
+        """
+        Build a MultiConfig from already-completed runs.
+
+        Loads full_info directly from each run's _summary.txt instead
+        of recomputing via fit_parameters. Use this when run_ir_all has
+        already been called on every config file.
+
+        Parameters
+        ----------
+        config_files : list of str
+            Paths to the individual configuration files. Each must have a
+            corresponding <outstem>_summary.txt on disk.
+        visible_run : bool, optional
+            Passed through to each Config constructor.
+        verbose : bool, optional
+            Print progress and mismatch details.
+
+        Returns
+        -------
+        instance : MultiConfig
+            Combined configuration loaded from summary files.
+
+        Raises
+        ------
+        ValueError
+            If fewer than two config files are supplied, or if any
+            configuration mismatch is found between runs.
+        """
         instance = cls.__new__(cls)
         if len(config_files) < 2:
             raise ValueError(f"Need at least 2 config files, got {len(config_files)}")

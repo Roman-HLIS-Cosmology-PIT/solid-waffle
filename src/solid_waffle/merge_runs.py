@@ -1,3 +1,32 @@
+"""
+merge_runs.py - Aggregate already-completed run_ir_all outputs.
+
+Loads results from existing _summary.txt files for each config and
+combines them into a single averaged output without rerunning the
+expensive fit_parameters computation.
+
+Usage
+-----
+    python merge_runs.py config1.txt config2.txt config3.txt --outstem combined
+
+Arguments
+---------
+config_files : list of str
+    Paths to the individual configuration files. Each must have a
+    corresponding <outstem>_summary.txt already on disk.
+--outstem : str, optional
+    Output stem for the combined results. Defaults to the first
+    config's outstem with '_combined' appended.
+
+Output
+------
+    <outstem>_summary.txt   combined characterization results
+    <outstem>_multi.pdf     combined parameter maps figure
+    <outstem>_m23.pdf       combined method 2 and 3 figure
+    <outstem>_hot.txt       combined hot pixel report
+    <outstem>_hotipc.pdf    combined hot pixel figure
+    <outstem>_nl.txt        combined non-linearity table
+"""
 import argparse
 from multi_config import MultiConfig
 
