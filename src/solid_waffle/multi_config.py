@@ -115,7 +115,7 @@ class MultiConfig(Config):
         self.mean_full_info = np.mean(np.mean(self.full_info, axis=0), axis=0) / np.mean(self.is_good)
         self.std_full_info = np.sqrt(
             np.mean(np.mean(self.full_info**2, axis=0), axis=0) / np.mean(self.is_good)
-                - self.mean_full_info**2
+            - self.mean_full_info**2
         )
 
     @classmethod
