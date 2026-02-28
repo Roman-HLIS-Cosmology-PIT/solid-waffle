@@ -69,6 +69,7 @@ import copy
 import sys
 import warnings
 
+import asdf
 import fitsio
 import numpy as np
 import scipy
@@ -142,6 +143,12 @@ def get_nside(formatpars):
     # Test configurations
     if formatpars == 1001:
         return 512
+    if formatpars == 2002:
+        return 512
+
+    # asdf files
+    if formatpars == 2001:
+        return 4096
 
 
 # Get number of time slices
@@ -176,6 +183,10 @@ def get_num_slices(formatpars, filename):
         hdus = fits.open(filename)
         ntslice = int(hdus[1].header["NAXIS3"])
         hdus.close()
+    elif formatpars == 2001 or formatpars == 2002:
+        af = asdf.open(filename)
+        ntslice = np.shape(af["roman"]["data"])[0]
+        af.close()
     else:
         print("Error! Invalid formatpars =", formatpars)
         exit()
@@ -312,6 +323,18 @@ def load_segment(filename, formatpars, xyrange, tslices, verbose):
         else:
             print("Error: non-fitsio methods not yet supported for formatpars=6")
             exit()
+    elif formatpars == 2001 or formatpars == 2002:
+        fileh = asdf.open(filename)
+        _ = get_nside(formatpars)  # might need in the future
+        for ts in range(ntslice_use):
+            t = tslices[ts]
+            if ts >= 1 and t == tslices[ts - 1]:
+                output_cube[ts, :, :] = output_cube[ts - 1, :, :]  # asked for the same slice again
+            else:
+                output_cube[ts, :, :] = 65535 - np.array(
+                    fileh["roman"]["data"][t - 1, xyrange[2] : xyrange[3], xyrange[0] : xyrange[1]]
+                )
+        fileh.close()
     else:
         print("Error! Invalid formatpars =", formatpars)
         exit()
