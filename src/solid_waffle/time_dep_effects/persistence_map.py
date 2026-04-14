@@ -123,7 +123,7 @@ def main():
         print(f"  Pair {i+1}: mean persistence signal = {np.mean(persistence):.6f} DN/s")
 
     print("\nStacking images...")
-    persistence_stack = np.stack(persistence_stack, axis=0)
+    persistence_stack = np.stack(persistence_images, axis=0)
     bright_stack = np.stack(bright_images, axis=0)
 
     persistence_map = np.mean(persistence_stack, axis=0)
