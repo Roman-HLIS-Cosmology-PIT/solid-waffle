@@ -95,7 +95,7 @@ def main():
     print(f" Stack shape: {stack.shape}")
     print(f" Persistence map shape: {persistence_map.shape}")
 
-    save_image_fits(persistence, OUTPUT_FILE)
+    save_image_fits(persistence_map, OUTPUT_FILE)
 
 if __name__ == "__main__":
     main()
