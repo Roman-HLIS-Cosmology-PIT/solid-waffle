@@ -1,5 +1,6 @@
 import numpy as np
 from astropy.io import fits
+import os
 
 LAST_BRIGHT_FILES = [
     "TVAC2_NOMOPS_SCIMON_20240419045204_WFI06_uncal_asdf_to.fits", # file 22
@@ -62,7 +63,6 @@ def make_2d_image(resultants):
 def save_image_fits(image_2d, output_path):
     hdu = fits.PrimaryHDU(image_2d)
     hdu.header['BUNIT'] = ('DN/s', 'Units of pixel values')
-    hdu.header['TFRAME'] = (TFRAME, 'Seconds per detector frame')
     hdu.header['NRESULT'] = (8, 'Number of resultants used')
     hdu.header['MULTACC'] = ('IM_107_8_S', 'MultiAccum Table used')
     hdu.header['AUTHOR'] = ('Amy Albert', 'Who made this file')
@@ -93,9 +93,9 @@ def main():
     persistence_map = np.mean(stack, axis=0)
 
     print(f" Stack shape: {stack.shape}")
-    print(f" Persistence map shape: {persistence_map.shape}}")
+    print(f" Persistence map shape: {persistence_map.shape}")
 
-    save_fits(persistence, OUTPUT_FILE)
+    save_image_fits(persistence, OUTPUT_FILE)
 
 if __name__ == "__main__":
     main()
