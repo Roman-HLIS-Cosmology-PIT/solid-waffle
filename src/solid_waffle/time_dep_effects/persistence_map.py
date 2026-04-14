@@ -61,7 +61,7 @@ def make_2d_image(resultants):
     return image_2d
 
 def save_image_fits(image_2d, output_path):
-    hdu = fits.PrimaryHDU(image_2d
+    hdu = fits.PrimaryHDU(image_2d)
     hdu.header['BUNIT'] = ('DN/s', 'Units of pixel values')
     hdu.header['NRESULT'] = (8, 'Number of resultants used')
     hdu.header['MULTACC'] = ('IM_107_8_S', 'MultiAccum Table used')
