@@ -19,7 +19,7 @@ FIRST_DARK_FILES = [
 ]
 
 OUTPUT_FILE = "persistence_map.fits"
-DATA_DIR = "/fs/scratch/PAS2340/amyalbert8/TVAC2_data/sci_monitor_Hflats_nominal_ops_fits_converted/"
+DATA_DIR = "/fs/scratch/PAS2340/amyalbert8/TVAC2_data/sci_monitor_darks_nominal_ops_fits_converted"
 
 def load_data(filepath):
     print(f"Loading: {os.path.basename(filepath)}")
@@ -61,7 +61,7 @@ def make_2d_image(resultants):
     return image_2d
 
 def save_image_fits(image_2d, output_path):
-    hdu = fits.PrimaryHDU(image_2d)
+    hdu = fits.PrimaryHDU(image_2d
     hdu.header['BUNIT'] = ('DN/s', 'Units of pixel values')
     hdu.header['NRESULT'] = (8, 'Number of resultants used')
     hdu.header['MULTACC'] = ('IM_107_8_S', 'MultiAccum Table used')
