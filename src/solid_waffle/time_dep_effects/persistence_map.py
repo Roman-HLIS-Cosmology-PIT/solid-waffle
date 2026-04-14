@@ -135,7 +135,7 @@ def main():
     print(f"  Mean persistence signal: {np.mean(persistence_map):.6f} DN/s")
 
     print("\nNormalising persistence map by bright signal...")
-    normalised_map = persistence_map / (bright_map + EPSILON)
+    normalised_map = persistence_map / (bright_map)
     print(f"  Mean normalised persistence: {np.mean(normalised_map):.6f}")
 
     print("\nSaving outputs...")
