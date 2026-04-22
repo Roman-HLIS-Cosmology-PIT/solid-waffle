@@ -90,7 +90,7 @@ def make_dark_baseline(true_dark_files):
     for fname in true_dark_files:
         filepath = os.path.join(DATA_DIR, fname)
         image_2d = process_file(filepath)
-        dark_images.append(image_2d)
+        time.dark_images.append(image_2d)
 
     dark_baseline = np.mean(np.stack(dark_images, axis=0), axis=0)
     print(f"Dark Baseline shape = {dark_baseline.shape}")
@@ -135,7 +135,11 @@ def main():
     print(f"  Mean persistence signal: {np.mean(persistence_map):.6f} DN/s")
 
     print("\nNormalising persistence map by bright signal...")
-    normalised_map = persistence_map / (bright_map)
+    normalised_map = np.where(
+        bright_map > 0,
+        persistence_map / np.where(bright_map > 0, bright_map, 1)
+        0.0
+    )
     print(f"  Mean normalised persistence: {np.mean(normalised_map):.6f}")
 
     print("\nSaving outputs...")
