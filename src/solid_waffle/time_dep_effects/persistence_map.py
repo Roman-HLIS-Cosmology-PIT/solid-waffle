@@ -32,26 +32,23 @@ OUTPUT_FILE = "persistence_map.fits"
 OUTPUT_NORM_FILE = "normalized_persistence_map.fits"
 DATA_DIR = ""
 
+first_dark_files = []
+true_dark_files = []
+last_bright_files = []
+data_dir = ""
+output_file = ""
+
 def load_json(filepath):
     print(f"Loading: {os.path.basename(filepath)}")
     with open(filepath, 'r') as file:
         data = json.load(file)
 
-    global output_file = data["outputFile"]
-    global data_dir = data["dataDirectory"]
-    global first_dark_files = []
-    global true_dark_files = []
-    global last_bright_files = []
-    last_bright_file_list = data["lastBrightFiles"]
-    first_dark_file_list = data["firstDarkFiles"]
-    true_dark_file_list = data["trueDarkFiles"]
-    
-    for file in last_bright_file_list:
-        last_bright_files.append(file)
-    for file in first_dark_file_list:
-        first_dark_files.append(file)
-    for file in true_dark_file_list:
-        true_dark_files.append(file)
+    output_file = data["outputFile"]
+    data_dir = data["dataDirectory"]
+
+    last_bright_files = list(data["lastBrightFiles"])
+    first_dark_files = list(data["firstDarkFiles"])
+    true_dark_files = list(data["trueDarkFiles"])
 
 def load_data(filepath):
 
@@ -133,7 +130,7 @@ def main():
     try:
         json_file = sys.argv[1]
     except Exception as e:
-        print(f"Error: e")
+        print(f"Error: {e}")
         print("Ensure command line argument <json_file> was provided")
         sys.exit(1)
     load_json(json_file)
@@ -144,7 +141,7 @@ def main():
     for i, (dark_file, bright_file) in enumerate(zip(first_dark_files, last_bright_files)):
         print(f"\n[Pair {i+1}/{len(first_dark_files)}]")
 
-        dark_images.append(process_file(os.path.join(data_dir), dark_file))
+        dark_images.append(process_file(os.path.join(data_dir, dark_file)))
         bright_images.append(process_file(os.path.join(data_dir, bright_file)))
 
     print("\nSubtracting dark baseline from first darks...")
@@ -170,7 +167,7 @@ def main():
     print("\nNormalising persistence map by bright signal...")
     normalised_map = np.where(
         bright_map > 0,
-        persistence_map / np.where(bright_map > 0, bright_map, 1),
+        persistence_map / bright_map,
         0.0
     )
     print(f"  Mean normalised persistence: {np.mean(normalised_map):.6f}")
