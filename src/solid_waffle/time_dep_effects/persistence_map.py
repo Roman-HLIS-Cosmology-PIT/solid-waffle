@@ -53,11 +53,10 @@ def load_json(filepath):
     true_dark_files = list(data["trueDarkFiles"])
 
 def load_data(filepath):
-
     print(f"Loading: {os.path.basename(filepath)}")
     with fits.open(filepath) as hdul:
-        data_with_ref = hdul[0].data.astype(np.float32)
-    data = data_with_ref[:, 4:4092, 4:4092]
+        data = hdul[0][:, 4:4092, 4:4092]
+    data = data.astype(np.float32)
     print(f" Shape: {data.shape}, Data Type: {data.dtype}")
     return data
 
