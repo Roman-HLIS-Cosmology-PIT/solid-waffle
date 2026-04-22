@@ -20,11 +20,7 @@ FIRST_DARK_FILES_TEST = [
 ]
 
 TRUE_DARK_FILES_TEST = [
-    "TVAC2_NOMOPS_SCIMON_20240419030148_WFI06_uncal_asdf_to.fits", # file 0
-    "TVAC2_NOMOPS_SCIMON_20240419030455_WFI06_uncal_asdf_to.fits", # file 1
-    "TVAC2_NOMOPS_SCIMON_20240419030801_WFI06_uncal_asdf_to.fits", # file 2
-    "TVAC2_NOMOPS_SCIMON_20240419031152_WFI06_uncal_asdf_to.fits", # file 3
-    "TVAC2_NOMOPS_SCIMON_20240419031458_WFI06_uncal_asdf_to.fits" # file 4
+dD
 ]
 first_dark_files = []
 true_dark_files = []
@@ -35,7 +31,7 @@ output_file = ""
 
 OUTPUT_FILE = "persistence_map.fits"
 OUTPUT_NORM_FILE = "normalized_persistence_map.fits"
-DATA_DIR = "/fs/scratch/PAS2340/amyalbert8/TVAC2_data/sci_monitor_darks_nominal_ops_fits_converted"
+DATA_DIR = ""
 
 def load_json(filepath):
     print(f"Loading: {os.path.basename(filepath)}")
