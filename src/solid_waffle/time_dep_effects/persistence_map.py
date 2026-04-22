@@ -55,7 +55,7 @@ def load_json(filepath):
 def load_data(filepath):
     print(f"Loading: {os.path.basename(filepath)}")
     with fits.open(filepath) as hdul:
-        data = hdul[0][:, 4:4092, 4:4092]
+        data = hdul[0].data[:, 4:4092, 4:4092]
     data = data.astype(np.float32)
     print(f" Shape: {data.shape}, Data Type: {data.dtype}")
     return data
