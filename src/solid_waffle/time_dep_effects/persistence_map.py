@@ -137,7 +137,7 @@ def main():
     print("\nNormalising persistence map by bright signal...")
     normalised_map = np.where(
         bright_map > 0,
-        persistence_map / np.where(bright_map > 0, bright_map, 1)
+        persistence_map / np.where(bright_map > 0, bright_map, 1),
         0.0
     )
     print(f"  Mean normalised persistence: {np.mean(normalised_map):.6f}")
