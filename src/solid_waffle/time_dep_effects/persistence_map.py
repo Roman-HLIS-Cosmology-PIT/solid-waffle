@@ -20,7 +20,11 @@ FIRST_DARK_FILES_TEST = [
 ]
 
 TRUE_DARK_FILES_TEST = [
-dD
+    "TVAC2_NOMOPS_SCIMON_20240419030148_WFI06_uncal_asdf_to.fits", 
+    "TVAC2_NOMOPS_SCIMON_20240419030455_WFI06_uncal_asdf_to.fits",
+    "TVAC2_NOMOPS_SCIMON_20240419030801_WFI06_uncal_asdf_to.fits",
+    "TVAC2_NOMOPS_SCIMON_20240419031152_WFI06_uncal_asdf_to.fits",
+    "TVAC2_NOMOPS_SCIMON_20240419031458_WFI06_uncal_asdf_to.fits"
 ]
 first_dark_files = []
 true_dark_files = []
