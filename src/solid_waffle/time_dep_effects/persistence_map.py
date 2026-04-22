@@ -90,7 +90,7 @@ def make_dark_baseline(true_dark_files):
     for fname in true_dark_files:
         filepath = os.path.join(DATA_DIR, fname)
         image_2d = process_file(filepath)
-        time.dark_images.append(image_2d)
+        dark_images.append(image_2d)
 
     dark_baseline = np.mean(np.stack(dark_images, axis=0), axis=0)
     print(f"Dark Baseline shape = {dark_baseline.shape}")
