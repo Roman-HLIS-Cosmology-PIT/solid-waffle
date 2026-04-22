@@ -39,6 +39,8 @@ data_dir = ""
 output_file = ""
 
 def load_json(filepath):
+    global output_file, data_dir
+    global last_bright_files, first_dark_files, true_dark_files
     print(f"Loading: {os.path.basename(filepath)}")
     with open(filepath, 'r') as file:
         data = json.load(file)
