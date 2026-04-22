@@ -1,8 +1,9 @@
 import numpy as np
 from astropy.io import fits
 import os
+import sys
 
-LAST_BRIGHT_FILES = [
+LAST_BRIGHT_FILES_TEST = [
     "TVAC2_NOMOPS_SCIMON_20240419045204_WFI06_uncal_asdf_to.fits", # file 22
     "TVAC2_NOMOPS_SCIMON_20240419074832_WFI06_uncal_asdf_to.fits", # file 78
     "TVAC2_NOMOPS_SCIMON_20240419093417_WFI06_uncal_asdf_to.fits", # file 90
@@ -10,7 +11,7 @@ LAST_BRIGHT_FILES = [
     "TVAC2_NOMOPS_SCIMON_20240419112117_WFI06_uncal_asdf_to.fits" # file 122
 ]
 
-FIRST_DARK_FILES = [
+FIRST_DARK_FILES_TEST = [
     "TVAC2_NOMOPS_SCIMON_20240419045519_WFI06_uncal_asdf_to.fits", # file 23
     "TVAC2_NOMOPS_SCIMON_20240419075152_WFI06_uncal_asdf_to.fits",  # file 79
     "TVAC2_NOMOPS_SCIMON_20240419093736_WFI06_uncal_asdf_to.fits",  # file 91
@@ -18,19 +19,44 @@ FIRST_DARK_FILES = [
     "TVAC2_NOMOPS_SCIMON_20240419112436_WFI06_uncal_asdf_to.fits" # file 123
 ]
 
-TRUE_DARK_FILES = [
+TRUE_DARK_FILES_TEST = [
     "TVAC2_NOMOPS_SCIMON_20240419030148_WFI06_uncal_asdf_to.fits", # file 0
     "TVAC2_NOMOPS_SCIMON_20240419030455_WFI06_uncal_asdf_to.fits", # file 1
     "TVAC2_NOMOPS_SCIMON_20240419030801_WFI06_uncal_asdf_to.fits", # file 2
     "TVAC2_NOMOPS_SCIMON_20240419031152_WFI06_uncal_asdf_to.fits", # file 3
     "TVAC2_NOMOPS_SCIMON_20240419031458_WFI06_uncal_asdf_to.fits" # file 4
 ]
+first_dark_files = []
+true_dark_files = []
+last_bright_files = []
+
+data_dir = ""
+output_file = ""
 
 OUTPUT_FILE = "persistence_map.fits"
 OUTPUT_NORM_FILE = "normalized_persistence_map.fits"
 DATA_DIR = "/fs/scratch/PAS2340/amyalbert8/TVAC2_data/sci_monitor_darks_nominal_ops_fits_converted"
 
+def load_json(filepath):
+    print(f"Loading: {os.path.basename(filepath)}")
+    with open(filepath, 'r') as file:
+        data = json.load(file)
+
+    output_file = data["outputFile"]
+    data_dir = data["dataDirectory"]
+    last_bright_file_list = data["lastBrightFiles"]
+    first_dark_file_list = data["firstDarkFiles"]
+    true_dark_file_list = data["trueDarkFiles"]
+    
+    for file in last_bright_file_list:
+        last_bright_files.append(file)
+    for file in first_dark_file_list:
+        first_dark_files.append(file)
+    for file in true_dark_file_list:
+        true_dark_files.append(file)
+
 def load_data(filepath):
+
     print(f"Loading: {os.path.basename(filepath)}")
     with fits.open(filepath) as hdul:
         data_with_ref = hdul[0].data.astype(np.float32)
@@ -88,7 +114,7 @@ def save_fits(image_2d, output_path, extra_headers=None):
 def make_dark_baseline(true_dark_files):
     dark_images = []
     for fname in true_dark_files:
-        filepath = os.path.join(DATA_DIR, fname)
+        filepath = os.path.join(data_dir, fname)
         image_2d = process_file(filepath)
         dark_images.append(image_2d)
 
@@ -104,15 +130,22 @@ def process_file(filepath):
     return image_2d
 
 def main():
-    dark_baseline = make_dark_baseline(TRUE_DARK_FILES)
+    try:
+        json_file = sys.argv[1]
+    except Exception as e:
+        print(f"Error: e")
+        print("Ensure command line argument <json_file> was provided")
+        sys.exit(1)
+    load_json(json_file)
+    dark_baseline = make_dark_baseline(true_dark_files)
     dark_images = []
     bright_images = []
 
-    for i, (dark_file, bright_file) in enumerate(zip(FIRST_DARK_FILES, LAST_BRIGHT_FILES)):
-        print(f"\n[Pair {i+1}/{len(FIRST_DARK_FILES)}]")
+    for i, (dark_file, bright_file) in enumerate(zip(first_dark_files, last_bright_files)):
+        print(f"\n[Pair {i+1}/{len(first_dark_files)}]")
 
-        dark_images.append(process_file(os.path.join(DATA_DIR, dark_file)))
-        bright_images.append(process_file(os.path.join(DATA_DIR, bright_file)))
+        dark_images.append(process_file(os.path.join(data_dir), dark_file)))
+        bright_images.append(process_file(os.path.join(data_dir, bright_file)))
 
     print("\nSubtracting dark baseline from first darks...")
     persistence_images = []
@@ -146,22 +179,23 @@ def main():
 
     save_fits(
         persistence_map,
-        OUTPUT_FILE,
+        output_file,
         extra_headers={
             'MAPTYPE': ('RAW',   'Raw persistence signal in DN/s'),
-            'NDARK':   (len(TRUE_DARK_FILES),  'Number of true darks in baseline'),
-            'NPAIRS':  (len(FIRST_DARK_FILES), 'Number of bright/dark pairs used')
+            'NDARK':   (len(true_dark_files),  'Number of true darks in baseline'),
+            'NPAIRS':  (len(first_dark_files), 'Number of bright/dark pairs used')
         }
     )
+    output_norm_file = "normalized_" + output_file
 
     save_fits(
         normalised_map,
-        OUTPUT_NORM_FILE,
+        output_norm_file,
         extra_headers={
             'BUNIT':   ('fraction',  'Persistence as fraction of bright signal'),
             'MAPTYPE': ('NORM',      'Persistence normalised by bright signal'),
-            'NDARK':   (len(TRUE_DARK_FILES),  'Number of true darks in baseline'),
-            'NPAIRS':  (len(FIRST_DARK_FILES), 'Number of bright/dark pairs used')
+            'NDARK':   (len(true_dark_files),  'Number of true darks in baseline'),
+            'NPAIRS':  (len(first_dark_files), 'Number of bright/dark pairs used')
         }
     )
 
