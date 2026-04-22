@@ -140,7 +140,7 @@ def main():
     for i, (dark_file, bright_file) in enumerate(zip(first_dark_files, last_bright_files)):
         print(f"\n[Pair {i+1}/{len(first_dark_files)}]")
 
-        dark_images.append(process_file(os.path.join(data_dir), dark_file)))
+        dark_images.append(process_file(os.path.join(data_dir), dark_file))
         bright_images.append(process_file(os.path.join(data_dir, bright_file)))
 
     print("\nSubtracting dark baseline from first darks...")
