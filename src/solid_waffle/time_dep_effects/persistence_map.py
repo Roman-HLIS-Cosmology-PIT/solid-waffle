@@ -27,12 +27,6 @@ TRUE_DARK_FILES_TEST = [
     "TVAC2_NOMOPS_SCIMON_20240419031152_WFI06_uncal_asdf_to.fits",
     "TVAC2_NOMOPS_SCIMON_20240419031458_WFI06_uncal_asdf_to.fits"
 ]
-first_dark_files = []
-true_dark_files = []
-last_bright_files = []
-
-data_dir = ""
-output_file = ""
 
 OUTPUT_FILE = "persistence_map.fits"
 OUTPUT_NORM_FILE = "normalized_persistence_map.fits"
@@ -43,8 +37,11 @@ def load_json(filepath):
     with open(filepath, 'r') as file:
         data = json.load(file)
 
-    output_file = data["outputFile"]
-    data_dir = data["dataDirectory"]
+    global output_file = data["outputFile"]
+    global data_dir = data["dataDirectory"]
+    global first_dark_files = []
+    global true_dark_files = []
+    global last_bright_files = []
     last_bright_file_list = data["lastBrightFiles"]
     first_dark_file_list = data["firstDarkFiles"]
     true_dark_file_list = data["trueDarkFiles"]
