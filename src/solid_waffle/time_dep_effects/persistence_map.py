@@ -110,8 +110,6 @@ def make_dark_baseline(true_dark_files):
     dark_images = []
     for fname in true_dark_files:
         filepath = os.path.join(data_dir, fname)
-        print(f"File path is {filepath}")
-        print(f"Data directory is {data_dir}")
         image_2d = process_file(filepath)
         dark_images.append(image_2d)
 
