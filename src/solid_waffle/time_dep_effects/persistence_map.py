@@ -2,6 +2,7 @@ import numpy as np
 from astropy.io import fits
 import os
 import sys
+import json
 
 LAST_BRIGHT_FILES_TEST = [
     "TVAC2_NOMOPS_SCIMON_20240419045204_WFI06_uncal_asdf_to.fits", # file 22
