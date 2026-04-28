@@ -102,7 +102,7 @@ def main(argv):
         print("file", ifile)
         for t in range(1, ntslice):
             frame = (
-                65535 - pyirc.load_segment(filelist[k], fileformat, [0, nside, 0, nside], [t], False)[0, :, :]
+                65535 - pyirc.load_segment(filelist[ifile], fileformat, [0, nside, 0, nside], [t], False)[0, :, :]
             )
             for ch in range(32):
                 xmin = max(ch * 128, 4)
