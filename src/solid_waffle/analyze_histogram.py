@@ -33,6 +33,10 @@ adu = np.arange(hist.shape[0])
 active_channels = [ch for ch in range(32) if hist[:, ch].max() > 0]
 print(f"Active channels: {active_channels}")
  
+# Grid layout used by all three figures
+ncols = 4
+nrows = int(np.ceil(len(active_channels) / ncols))
+
 # Gaussian smoothing
 sigma = 128
 smoothed = np.zeros_like(hist, dtype=float)
@@ -63,8 +67,6 @@ plt.savefig("histogram_raw.png", dpi=150)
 print("Saved histogram_raw.png")
  
 # output smoothed and normal histogram
-ncols = 4
-nrows = int(np.ceil(len(active_channels) / ncols))
 fig2, axes2 = plt.subplots(nrows, ncols,
                             figsize=(ncols * 4, nrows * 3),
                             sharex=True)
