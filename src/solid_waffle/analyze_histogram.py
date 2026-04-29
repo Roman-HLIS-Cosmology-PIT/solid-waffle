@@ -31,7 +31,7 @@ adu = np.arange(hist.shape[0])
 
 # Only use channels that actually have data
 all_channels = [ch for ch in range(32) if hist[:, ch].max() >= 0]
-print(f"Active channels: {active_channels}")
+print(f"All channels: {all_channels}")
 
 # ── 1. Gaussian smoothing ─────────────────────────────────────────────────────
 # gaussian_filter1d slides a Gaussian kernel along the 1-D histogram.
