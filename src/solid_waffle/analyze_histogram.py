@@ -30,7 +30,7 @@ hist = np.loadtxt(histfile, dtype=int)   # shape: (65536, 32)
 adu = np.arange(hist.shape[0])
 
 # Only use channels that actually have data
-active_channels = [ch for ch in range(32) if hist[:, ch].max() > 0]
+all_channels = [ch for ch in range(32) if hist[:, ch].max() >= 0]
 print(f"Active channels: {active_channels}")
 
 # ── 1. Gaussian smoothing ─────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ print(f"Active channels: {active_channels}")
 sigma = 512
 smoothed = np.zeros_like(hist, dtype=float)
 
-for ch in active_channels:
+for ch in all_channels:
     smoothed[:, ch] = gaussian_filter1d(hist[:, ch].astype(float),
                                         sigma=sigma, truncate=4.0)
 
@@ -106,7 +106,7 @@ ax3.set_xlabel("ADU value (pixel intensity)")
 ax3.set_ylabel("hist / smoothed  –  1")
 ax3.set_title(f"Fractional residual (σ={sigma} bins)")
 ax3.set_xlim(0, 65535)
-ax3.set_ylim(-0.5, 0.5)
+ax3.set_ylim(-5, 5)
 ax3.legend(fontsize=6, ncol=4, loc="upper right")
 plt.tight_layout()
 plt.savefig("histogram_ratio.png", dpi=150)
