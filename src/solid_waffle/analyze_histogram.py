@@ -58,7 +58,7 @@ with np.errstate(divide="ignore", invalid="ignore"):
 
 fig1, ax1 = plt.subplots(figsize=(12, 5))
 
-for ch in active_channels:
+for ch in all_channels:
     ax1.semilogy(adu, hist[:, ch], lw=0.5, alpha=0.6, label=f"Ch {ch}")
 
 ax1.set_xlabel("ADU value (pixel intensity)")
@@ -77,11 +77,11 @@ print("Saved histogram_raw.png")
 
 fig2, ax2 = plt.subplots(figsize=(12, 5))
 
-for ch in active_channels:
+for ch in all_channels:
     ax2.semilogy(adu, hist[:, ch], lw=0.5, alpha=0.4, color="steelblue",
-                 label="raw" if ch == active_channels[0] else "_nolegend_")
+                 label="raw" if ch == all_channels[0] else "_nolegend_")
     ax2.semilogy(adu, smoothed[:, ch], lw=1.0, alpha=0.8, color="orange",
-                 label="smoothed" if ch == active_channels[0] else "_nolegend_")
+                 label="smoothed" if ch == all_channels[0] else "_nolegend_")
 
 ax2.set_xlabel("ADU value (pixel intensity)")
 ax2.set_ylabel("Counts (log scale)")
@@ -98,7 +98,7 @@ print("Saved histogram_smoothed_overlay.png")
 
 fig3, ax3 = plt.subplots(figsize=(12, 5))
 
-for ch in active_channels:
+for ch in all_channels:
     ax3.plot(adu, ratio[:, ch], lw=0.5, alpha=0.6, label=f"Ch {ch}")
 
 ax3.axhline(0, color="black", lw=1.0, ls="--", label="zero")
