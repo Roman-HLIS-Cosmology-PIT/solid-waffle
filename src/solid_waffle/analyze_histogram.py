@@ -33,10 +33,7 @@ active_channels = [ch for ch in range(32) if hist[:, ch].max() > 0]
 print(f"Active channels: {active_channels}")
 
 # ── 1. Gaussian smoothing ─────────────────────────────────────────────────────
-# sigma=512 is a reasonable starting point for a 65536-bin histogram.
-# Increase it if the ratio still looks noisy; decrease if features get washed out.
-
-sigma = 512
+sigma = 1024
 smoothed = np.zeros_like(hist, dtype=float)
 
 for ch in active_channels:
@@ -49,9 +46,6 @@ with np.errstate(divide="ignore", invalid="ignore"):
     ratio = np.where(smoothed > 0, hist / smoothed - 1.0, np.nan)
 
 # ── Helper: make the per-channel grid figure ──────────────────────────────────
-# This is a function so we don't repeat the same subplot setup code three times.
-# A function takes inputs, does something, and returns a result.
-# def means we are defining a new function.
 
 def make_grid_fig(active_channels, title):
     """Create a grid of subplots, one per channel. Returns fig and flat axes array."""
@@ -143,7 +137,7 @@ ax.set_xlabel("ADU value (pixel intensity)")
 ax.set_ylabel("hist / smoothed  –  1")
 ax.set_title(f"Fractional residual (σ={sigma}) — all channels")
 ax.set_xlim(0, 65535)
-ax.set_ylim(-0.5, 0.5)
+ax.set_ylim(-5, 5)
 ax.legend(fontsize=6, ncol=4, loc="upper right")
 plt.tight_layout()
 plt.savefig("histogram_ratio_combined.png", dpi=150)
@@ -157,7 +151,7 @@ for idx, ch in enumerate(active_channels):
     axes[idx].axhline(0, color="black", lw=0.8, ls="--")
     axes[idx].set_title(f"Ch {ch}", fontsize=9)
     axes[idx].set_xlim(0, 65535)
-    axes[idx].set_ylim(-0.5, 0.5)
+    axes[idx].set_ylim(-5, 5)
 fig.supxlabel("ADU value (pixel intensity)")
 fig.supylabel("hist / smoothed  –  1")
 plt.tight_layout()
