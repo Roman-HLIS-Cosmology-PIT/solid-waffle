@@ -38,7 +38,7 @@ print(f"Active channels: {active_channels}")
 # sigma=128 means the blur radius is 128 bins wide.
 # Larger sigma = smoother baseline, fewer fine features survive.
 
-sigma = 128
+sigma = 512
 smoothed = np.zeros_like(hist, dtype=float)
 
 for ch in active_channels:
