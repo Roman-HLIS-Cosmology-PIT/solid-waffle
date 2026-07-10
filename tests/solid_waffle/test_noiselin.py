@@ -2,10 +2,51 @@
 
 import os
 
+import asdf
 import numpy as np
 from astropy.io import fits
 from numpy.random import RandomState
+from solid_waffle.linearity_run import build_linearity_file
 from solid_waffle.noise_run import run_noise
+
+LINEARITY_JSON = """{
+"SCA": 6,
+"RAMPS": [
+{
+  "FORMAT": 6,
+  "FILE": "$TMPDIR/99999999_data_hiflat_001.fits",
+  "START": 1,
+  "NRAMP": 3,
+  "TSTART": 2
+},
+{
+  "FORMAT": 6,
+  "FILE": "$TMPDIR/99999999_data_loflat_001.fits",
+  "START": 1,
+  "NRAMP": 3,
+  "TSTART": 2
+},
+{
+  "FORMAT": 6,
+  "FILE": "$TMPDIR/99999999_data_dark_001.fits",
+  "START": 1,
+  "NRAMP": 4,
+  "TSTART": 2
+}
+],
+"DARK": -1,
+"TFRAME": 3.16,
+"P_ORDER": 5,
+"OUTPUT": "$TMPDIR/roman_wfi_linearitylegendre_DUMMY99999999_SCA06.asdf",
+"SIGN": 1,
+"SLOPECUT": 0.25,
+"BIAS":
+  {
+    "FILE": "$TMPDIR/noiseprop.fits"
+  },
+"NEGATIVEPAD": 500
+}
+"""
 
 
 def test_intlin(tmp_path):
@@ -185,11 +226,45 @@ def test_intlin(tmp_path):
         assert nf["AMP33"].header["RU_PINK"] < 0.3
         assert 2.0 < np.median(nf["AMP33"].data[1]) < 3.0
 
+    # linearity test
+    with open(tmp_path + "/linearity.json", "w") as fl:
+        fl.write(LINEARITY_JSON.replace(r"$TMPDIR", tmp_path))
+    build_linearity_file(tmp_path + "/linearity.json")
+    with asdf.open(tmp_path + "/roman_wfi_linearitylegendre_DUMMY99999999_SCA06.asdf") as af:
+        print(af.info(max_rows=None))
+
+        # shapes
+        for leaf in ["Smax", "Smin", "Sref", "dark", "dq", "maxerr"]:
+            assert np.shape(af["roman"][leaf]) == (4096, 4096)
+        assert np.shape(af["roman"]["data"]) == (6, 4096, 4096)
+        assert np.shape(af["roman"]["ramperr"]) == (3, 4096, 4096)
+
+        # now all the tests of the output
+        assert 33500 < np.median(af["roman"]["Smax"]) < 33650
+        assert 1400 < np.percentile(af["roman"]["Smax"], 75) - np.percentile(af["roman"]["Smax"], 25) < 1560
+        assert 4490 < np.median(af["roman"]["Smin"]) < 4510
+        assert 28.0 < np.percentile(af["roman"]["Smin"], 75) - np.percentile(af["roman"]["Smin"], 25) < 35.0
+        assert 4990 < np.median(af["roman"]["Sref"]) < 5010
+        assert 28.0 < np.percentile(af["roman"]["Smin"], 75) - np.percentile(af["roman"]["Smin"], 25) < 35.0
+        assert 30.0 < np.median(af["roman"]["maxerr"]) < 38.0
+        assert 50000 < np.count_nonzero(af["roman"]["dq"]) < 100000
+        assert -0.003 < np.median(af["roman"]["dark"]) < 0.003
+        assert 0.1 < np.percentile(af["roman"]["dark"], 75) - np.percentile(af["roman"]["dark"], 25) < 0.4
+
+        # polynomial coefficients
+        aref = np.array(
+            [1.6043578e04, 1.7696527e04, 1.2322935e03, 9.3197868e01, 1.5366711e01, -1.0441194e00],
+            dtype=np.float32,
+        )
+        assert np.all(np.abs(np.median(af["roman"]["data"], axis=(-2, -1)) - aref) < 0.1 * np.abs(aref))
+
+        # pflat
+        pflat = np.median(af["roman"]["pflat"], axis=(-2, -1))
+        assert 900 < pflat[0] < 1100
+        assert 90 < pflat[1] < 110
+        assert -0.1 < pflat[2] < 0.1
+
     # cleanup
     for f in cleanuplist:
         print("<<", f)
         os.remove(tmp_path + "/99999999_" + f + ".fits")
-
-
-# if __name__ == "__main__":
-#     test_intlin("out")
