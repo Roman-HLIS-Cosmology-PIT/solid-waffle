@@ -6,6 +6,8 @@ import asdf
 import numpy as np
 from astropy.io import fits
 from numpy.random import RandomState
+from scipy.optimize import curve_fit
+from solid_waffle.histograms import main as hist_main
 from solid_waffle.linearity_run import build_linearity_file
 from solid_waffle.noise_run import run_noise
 
@@ -47,6 +49,15 @@ LINEARITY_JSON = """{
 "NEGATIVEPAD": 500
 }
 """
+
+
+def _f(x, *p):
+    """10-Gaussian fitting function."""
+
+    e = np.zeros_like(x)
+    for j in range(0, 30, 3):
+        e[:] += p[j] * np.exp(-((x - p[j + 1]) ** 2) / 2.0 / p[j + 2] ** 2)
+    return e
 
 
 def test_intlin(tmp_path):
@@ -152,6 +163,49 @@ def test_intlin(tmp_path):
             )
             cleanuplist.append(f"data_{x[0]:s}_{sq+1:03d}")
 
+    # make histograms
+    hist_main(
+        [
+            None,
+            "-f",
+            "6",
+            "-i",
+            tmp_path + "/99999999_data_loflat_001.fits",
+            "-o",
+            tmp_path + "/hist.dat",
+            "-n",
+            "3",
+        ]
+    )
+    # do a fit
+    p0 = np.zeros(30)
+    for j in range(10):
+        p0[3 * j] = 20000 * np.exp(-0.1 * j)
+        p0[3 * j + 1] = 5300 + 320 * j
+        p0[3 * j + 2] = (80 + 20 * j) / 2.355
+    p, _ = curve_fit(_f, np.linspace(0, 65535, 65536), np.loadtxt(tmp_path + "/hist.dat")[:, 1], p0=p0)
+    p_true = p.reshape((10, 3))
+    p_target = np.array(
+        [
+            [18526.87417942, 5312.12203703, 33.7895383],
+            [15695.23260185, 5636.60580996, 39.87963484],
+            [13466.77768214, 5960.25377882, 46.46268855],
+            [11784.98963044, 6283.56822037, 53.05864227],
+            [10274.62231324, 6606.478787, 61.19831133],
+            [9094.24783828, 6930.87216767, 69.82947419],
+            [8327.41713657, 7256.36065134, 77.77538278],
+            [7840.51518358, 7584.20804014, 81.97083429],
+            [7606.09658501, 7911.61062761, 88.12513192],
+            [7242.42816931, 8220.85040465, 71.39089904],
+        ]
+    )
+    diff = np.abs(p_true - p_target)
+    assert np.all(diff[:, 0] < 500)
+    assert np.all(diff[:, 1] < 500)
+    assert np.all(diff[:, 2] < 25)
+
+    os.remove(tmp_path + "/hist.dat")
+
     # ... and now we can run the noise script
     run_noise(
         {
@@ -256,7 +310,9 @@ def test_intlin(tmp_path):
             [1.6043578e04, 1.7696527e04, 1.2322935e03, 9.3197868e01, 1.5366711e01, -1.0441194e00],
             dtype=np.float32,
         )
-        assert np.all(np.abs(np.median(af["roman"]["data"], axis=(-2, -1)) - aref) < 0.05 * np.abs(aref) + 0.5)
+        assert np.all(
+            np.abs(np.median(af["roman"]["data"], axis=(-2, -1)) - aref) < 0.05 * np.abs(aref) + 0.5
+        )
 
         # pflat
         pflat = np.median(af["roman"]["pflat"], axis=(-2, -1))

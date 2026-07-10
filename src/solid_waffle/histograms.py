@@ -15,7 +15,10 @@ def main(argv):
     ----------
     argv : list of str
         Arguments, in the form of a list:
-        ``[-f, <format>, -i, <1st input file>, -o, <output file>, -n, <number of files>]``.
+        ``[<ignore>, -f, <format>, -i, <1st input file>, -o, <output file>, -n, <number of files>]``.
+
+        (This is designed so the calling script can be the 1st argument; in a program you can simply use
+        ``None``.)
 
     Returns
     -------
