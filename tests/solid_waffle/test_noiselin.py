@@ -256,13 +256,23 @@ def test_intlin(tmp_path):
             [1.6043578e04, 1.7696527e04, 1.2322935e03, 9.3197868e01, 1.5366711e01, -1.0441194e00],
             dtype=np.float32,
         )
-        assert np.all(np.abs(np.median(af["roman"]["data"], axis=(-2, -1)) - aref) < 0.1 * np.abs(aref))
+        assert np.all(np.abs(np.median(af["roman"]["data"], axis=(-2, -1)) - aref) < 0.05 * np.abs(aref) + 0.5)
 
         # pflat
         pflat = np.median(af["roman"]["pflat"], axis=(-2, -1))
         assert 900 < pflat[0] < 1100
         assert 90 < pflat[1] < 110
         assert -0.1 < pflat[2] < 0.1
+
+        # metadata
+        meta = af["roman"]["meta"]
+        assert meta["instrument"]["detector"] == "WFI06"
+        assert meta["instrument"]["name"] == "WFI"
+        assert meta["origin"] == "PIT - solid-waffle"
+        assert meta["reftype"] == "LINEARITYLEGENDRE"
+        assert meta["telescope"] == "ROMAN"
+        for _x in ["author", "date", "description", "pedigree", "useafter"]:
+            assert meta[_x] is not None
 
     # cleanup
     for f in cleanuplist:
