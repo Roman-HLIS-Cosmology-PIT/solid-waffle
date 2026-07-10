@@ -188,7 +188,7 @@ def test_intlin(tmp_path):
     # cleanup
     for f in cleanuplist:
         print("<<", f)
-        os.remove(tmp_path + "/99999999_data_" + f + ".fits")
+        os.remove(tmp_path + "/99999999_" + f + ".fits")
 
 
 # if __name__ == "__main__":
