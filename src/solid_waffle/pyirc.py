@@ -69,6 +69,7 @@ import copy
 import sys
 import warnings
 
+import asdf
 import fitsio
 import numpy as np
 import scipy
@@ -142,6 +143,12 @@ def get_nside(formatpars):
     # Test configurations
     if formatpars == 1001:
         return 512
+    if formatpars == 2002:
+        return 512
+
+    # asdf files
+    if formatpars == 2001:
+        return 4096
 
 
 # Get number of time slices
@@ -176,9 +183,12 @@ def get_num_slices(formatpars, filename):
         hdus = fits.open(filename)
         ntslice = int(hdus[1].header["NAXIS3"])
         hdus.close()
+    elif formatpars == 2001 or formatpars == 2002:
+        af = asdf.open(filename)
+        ntslice = np.shape(af["roman"]["data"])[0]
+        af.close()
     else:
-        print("Error! Invalid formatpars =", formatpars)
-        exit()
+        raise ValueError("Invalid formatpars = {formatpars}")
     return ntslice
 
 
@@ -262,8 +272,7 @@ def load_segment(filename, formatpars, xyrange, tslices, verbose):
                 output_cube[ts, :, :] = np.array(fileh[t][xyrange[2] : xyrange[3], xyrange[0] : xyrange[1]])
             fileh.close()
         else:
-            print("Error: non-fitsio methods not yet supported for formatpars=3 or 7")
-            exit()
+            raise ValueError("Error: non-fitsio methods not yet supported for formatpars=3 or 7")
     elif formatpars == 4:
         if use_fitsio:
             fileh = fitsio.FITS(filename)
@@ -278,8 +287,7 @@ def load_segment(filename, formatpars, xyrange, tslices, verbose):
                     )
             fileh.close()
         else:
-            print("Error: non-fitsio methods not yet supported for formatpars=4")
-            exit()
+            raise ValueError("Error: non-fitsio methods not yet supported for formatpars=4")
     elif formatpars == 5:
         if use_fitsio:
             fileh = fitsio.FITS(filename)
@@ -294,8 +302,7 @@ def load_segment(filename, formatpars, xyrange, tslices, verbose):
                     )
             fileh.close()
         else:
-            print("Error: non-fitsio methods not yet supported for formatpars=5")
-            exit()
+            raise ValueError("Error: non-fitsio methods not yet supported for formatpars=5")
     elif formatpars == 6:
         if use_fitsio:
             fileh = fitsio.FITS(filename)
@@ -310,11 +317,21 @@ def load_segment(filename, formatpars, xyrange, tslices, verbose):
                     )
             fileh.close()
         else:
-            print("Error: non-fitsio methods not yet supported for formatpars=6")
-            exit()
+            raise ValueError("Error: non-fitsio methods not yet supported for formatpars=6")
+    elif formatpars == 2001 or formatpars == 2002:
+        fileh = asdf.open(filename)
+        _ = get_nside(formatpars)  # might need in the future
+        for ts in range(ntslice_use):
+            t = tslices[ts]
+            if ts >= 1 and t == tslices[ts - 1]:
+                output_cube[ts, :, :] = output_cube[ts - 1, :, :]  # asked for the same slice again
+            else:
+                output_cube[ts, :, :] = 65535 - np.array(
+                    fileh["roman"]["data"][t - 1, xyrange[2] : xyrange[3], xyrange[0] : xyrange[1]]
+                )
+        fileh.close()
     else:
-        print("Error! Invalid formatpars =", formatpars)
-        exit()
+        raise ValueError(f"Error! Invalid formatpars = {formatpars}")
 
     return output_cube
 
@@ -779,8 +796,7 @@ def ref_array_block(filelist, formatpars, yrange, tslices, verbose):
     output_array = np.zeros((num_files, 2 * ntslices + 1))
 
     if len(yrange) < 2:
-        print("Error in ref_array_block: yrange =", yrange)
-        exit()
+        raise ValueError(f"Error in ref_array_block: yrange = {yrange}")
     for ifile in range(num_files):
         ymin = yrange[0]
         ymax = yrange[1]
@@ -1402,8 +1418,7 @@ def basic(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verbose
     dx = region_cube.shape[3]
     # npix = dx * dy
     if nt != len(tslices):
-        print("Error in pyirc.basic: incompatible number of time slices")
-        exit()
+        raise RuntimeError("Error in pyirc.basic: incompatible number of time slices")
     if verbose:
         print("nfiles = ", num_files, ", ntimes = ", nt, ", dx,dy=", dx, dy)
     treset = 0
@@ -1776,8 +1791,7 @@ def corr_5x5(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verb
     dx = region_cube.shape[3]
     # npix = dx * dy
     if nt != len(tslices):
-        print("Error in pyirc.corr_5x5: incompatible number of time slices")
-        exit()
+        raise RuntimeError("Error in pyirc.corr_5x5: incompatible number of time slices")
     if verbose:
         print("nfiles = ", num_files, ", ntimes = ", nt, ", dx,dy=", dx, dy)
     # treset = 0
@@ -2497,8 +2511,7 @@ def bfe(region_cube, tslices, basicinfo, ctrl_pars_bfe, swi, verbose):
     dx = region_cube.shape[3]
     # npix = dx * dy
     if nt != len(tslices):
-        print("Error in basic: incompatible number of time slices")
-        exit()
+        raise RuntimeError("Error in basic: incompatible number of time slices")
     if verbose:
         print("nfiles = ", num_files, ", ntimes = ", nt, ", dx,dy=", dx, dy)
     treset = 0

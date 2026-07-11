@@ -1,6 +1,133 @@
+import os
+
+import asdf
 import numpy as np
+from astropy.io import fits
+from solid_waffle.asdf_to_fits import main as convert_asdf_to_fits_main
 from solid_waffle.correlation_run import run_ir_all
 from solid_waffle.flat_simulator import simulate_flat
+from solid_waffle.pyirc import get_num_slices, load_segment
+
+
+def create_dummy_asdf(asdf_path, data_type="flat", frames=20, shape=(512, 512)):
+    """
+    Test function to make a 512x512 simulated asdf file.
+
+    Parameters
+    ----------
+    asdf_path : str or pathlib.Path
+        Path to the file which will be created
+    data_type : str
+        Type of file to be simulated - "dark" or "flat"
+    frames : int
+        number of frames in simulated asdf file. Default is 20
+    shape : tuple (int, int)
+        shape of data array in simulated asdf file. Default is (512, 512)
+
+    Returns
+    -------
+    data : np.ndarray of float, shape (frames, shape[0], shape[1])
+        data stored in simulated asdf file
+
+    """
+    rng = np.random.default_rng(42)  # fixed seed
+    if data_type == "flat":
+        data = 3000 + rng.normal(0, 50, size=(frames, *shape))
+    else:
+        data = 100 + rng.normal(0, 5, size=(frames, *shape))
+    data = np.clip(data, 0, 65535)
+    tree = {"roman": {"data": data}}
+    with asdf.AsdfFile(tree) as af:
+        af.write_to(asdf_path)
+    return data
+
+
+def test_asdf_to_fits(tmp_path):
+    """
+    Test function to convert directory of asdf files to fits files.
+
+    Parameters
+    ----------
+    tmp_path : str or pathlib.Path
+        Directory in which to run the test.
+
+    Returns
+    -------
+    None
+
+    """
+    original_data = {}
+    for i in range(2):
+        data = create_dummy_asdf(tmp_path / f"flat_{i+1:03d}.asdf", data_type="flat")
+        original_data[f"flat_{i+1:03d}"] = np.clip(data, 0, 65535).astype(np.uint16)
+    for i in range(2):
+        data = create_dummy_asdf(tmp_path / f"dark_{i+1:03d}.asdf", data_type="dark")
+        original_data[f"dark_{i+1:03d}"] = np.clip(data, 0, 65535).astype(np.uint16)
+
+    orig_cwd = os.getcwd()
+    os.chdir(tmp_path)
+
+    try:
+        convert_asdf_to_fits_main()
+
+        output_dir = tmp_path.parent / (tmp_path.name + "_fits_converted")
+        assert output_dir.exists()
+
+        expected_files = [
+            output_dir / "flat_001_asdf_to.fits",
+            output_dir / "flat_002_asdf_to.fits",
+            output_dir / "dark_001_asdf_to.fits",
+            output_dir / "dark_002_asdf_to.fits",
+        ]
+        for f in expected_files:
+            assert f.exists(), f"Missing file: {f.name}"
+            with fits.open(f) as hdul:
+                data = hdul[0].data
+                assert data.shape == (20, 512, 512)
+                assert data.dtype == np.uint16
+                # check values against original
+                key = f.name.replace("_asdf_to.fits", "")
+                assert np.all(data == original_data[key])
+
+    finally:
+        os.chdir(orig_cwd)
+
+
+def test_run_asdf(tmp_path):
+    """
+    Test function to run solid-waffle on a simulated asdf 512x512 file.
+
+    Parameters
+    ----------
+    tmp_path : str or pathlib.Path
+        Directory in which to run the test.
+
+    Returns
+    -------
+    None
+
+    """
+
+    frames, ny, nx = 20, 512, 512
+    fill_value = 1000.0
+    np.full((frames, ny, nx), fill_value)
+
+    asdf_path = str(tmp_path / "test.asdf")
+    data_out = create_dummy_asdf(asdf_path, data_type="flat", frames=frames, shape=(ny, nx))
+
+    # Test get_num_slices
+    ntslice = get_num_slices(2002, asdf_path)
+    assert ntslice == frames
+
+    # Test load_segment
+    xyrange = [0, nx, 0, ny]
+    tslices = [1, 2, 3]
+    result = load_segment(asdf_path, 2002, xyrange, tslices, verbose=False)
+
+    assert result.shape == (len(tslices), ny, nx)
+    # Check the 65535 - data transformation was applied
+    expected = np.clip(65535 - data_out, 0, 65535)
+    assert np.allclose(result, expected[0:3])
 
 
 def test_run(tmp_path):
