@@ -192,7 +192,7 @@ def get_num_slices(formatpars, filename):
     return ntslice
 
 
-def load_segment(filename, formatpars, xyrange, tslices, verbose):
+def load_segment(filename, formatpars, xyrange, tslices, verbose, use_fitsio=True):
     """
     Function to load an image segment.
 
@@ -209,6 +209,9 @@ def load_segment(filename, formatpars, xyrange, tslices, verbose):
         Time slices to use (beginning slice is 1).
     verbose : bool
         Whether to print a lot of outputs.
+    use_fitsio : bool, optional
+        Whether to use the ``fitsio`` package for FITS files (usually no reason to
+        turn this off --- False would force use of astropy instead).
 
     Returns
     -------
@@ -225,10 +228,6 @@ def load_segment(filename, formatpars, xyrange, tslices, verbose):
 
     if verbose:
         print("Reading:", filename)
-
-    # Recommended True
-    # (False defaults to astropy tools, which work but are slow because of the way this script works)
-    use_fitsio = True
 
     # Get dimensions of output cube
     nxuse = xyrange[1] - xyrange[0]
