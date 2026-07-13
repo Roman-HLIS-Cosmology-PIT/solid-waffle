@@ -308,3 +308,16 @@ def test_run(tmp_path):
     diff = np.amax(np.abs(np.mean(data, axis=0) - expected_outputs) / tol)
     print(diff)
     assert diff < 1.0
+
+    # now with IPCSUB on
+    with open(temp_dir + "/analyze_cfg.txt", "w") as f:
+        f.write(analyze_cfg)
+        f.write("IPCSUB: True\n")
+    run_ir_all(temp_dir + "/analyze_cfg.txt")
+    data = np.loadtxt(temp_dir + "/analysis_summary.txt")
+    print(">>", np.mean(data, axis=0))
+
+    expected_outputs[11:13] = np.array([1.22711440e02, 1.16214368e02])
+    diff = np.amax(np.abs(np.mean(data, axis=0) - expected_outputs) / tol)
+    print(diff)
+    assert diff < 1.0

@@ -6,7 +6,14 @@ import asdf
 import numpy as np
 import pytest
 from astropy.io import fits
-from solid_waffle.pyirc import get_nside, get_num_slices, load_segment
+from solid_waffle.pyirc import (
+    get_nside,
+    get_num_slices,
+    load_segment,
+    ref_array,
+    ref_array_block,
+    ref_array_onerow,
+)
 
 
 def test_format2(tmp_path):
@@ -84,6 +91,13 @@ def test_format4(tmp_path):
     x = load_segment(fn, fmt, [698, 702, 298, 302], [5], True)
     assert np.allclose(x, test)
 
+    with pytest.raises(ValueError):
+        load_segment(fn, fmt, [698, 702, 298, 302], [5], True, use_fitsio=False)
+
+    # calling the same frame
+    y = load_segment(fn, fmt, [698, 702, 298, 302], [5, 5], True)
+    assert np.allclose(x, y[1])
+
     os.remove(fn)
 
 
@@ -111,11 +125,61 @@ def test_format5(tmp_path):
     os.remove(fn)
 
 
+def test_format6(tmp_path):
+    """Test for format #6."""
+
+    # set up file
+    fn = str(tmp_path) + "/test6.fits"
+    arr = np.zeros((5, 4096, 4096), dtype=np.uint16)
+    for j in range(5):
+        arr[j, 4:-4, 4:-4] = 1000 * (j + 1)
+    arr[4, 300, 700] = 25000
+    arr[4, :512, :4] = 50
+    hdulist = [fits.PrimaryHDU(), fits.ImageHDU(arr[None, ...])]
+    fits.HDUList(hdulist).writeto(fn, overwrite=True)
+    fmt = 6
+
+    # now the tests
+    assert get_nside(fmt) == 4096
+    assert get_num_slices(fmt, fn) == 5
+    test = np.zeros((4, 4))
+    test[:, :] = 60535
+    test[2, 2] = 40535
+    x = load_segment(fn, fmt, [698, 702, 298, 302], [5], True)
+    assert np.allclose(x, test)
+    with pytest.raises(ValueError):
+        load_segment(fn, fmt, [698, 702, 298, 302], [5], True, use_fitsio=False)
+
+    # calling the same frame
+    y = load_segment(fn, fmt, [698, 702, 298, 302], [5, 5], True)
+    assert np.allclose(x, y[1])
+
+    # reference test
+    ra = ref_array([fn], fmt, 16, [3, 5], True)
+    assert np.shape(ra) == (1, 16, 5)
+    assert np.allclose(ra[0, :, 0], 65535)
+    assert np.allclose(ra[0, 2:, 1], 65535)
+    assert np.allclose(ra[0, :2, 1], 65510)
+    assert np.allclose(ra[0, :, 2], 0)
+    assert np.allclose(ra[0, :2, 3], 25)
+    assert np.allclose(ra[0, 2:, 3], 0)
+    assert np.allclose(ra[0, :, 4], 0)
+    ra2 = ref_array_onerow([fn], fmt, 1, 16, [3, 5], True)
+    print(np.shape(ra2))
+    assert np.allclose(ra[:, 1, :], ra2[:, 1, :])
+    ra3 = ref_array_block([fn], fmt, [256, 512], [3, 5], True)
+    assert np.allclose(ra[:, 1, :], ra3)
+    with pytest.raises(ValueError):
+        ref_array_block([fn], fmt, [256], [3, 5], True)
+
+    os.remove(fn)
+
+
 def test_format7(tmp_path):
     """Test for format #7."""
 
     # set up file
-    fn = str(tmp_path) + "/test3.fits"
+    fn = str(tmp_path) + "/test7.fits"
     arr = np.zeros((5, 2048, 2048), dtype=np.uint16)
     for j in range(5):
         arr[j, 4:-4, 4:-4] = 1000 * (j + 1)
@@ -160,5 +224,29 @@ def test_format2001(tmp_path):
     test[2, 2] = 40535
     x = load_segment(fn, fmt, [698, 702, 298, 302], [5], True)
     assert np.allclose(x, test)
+
+    os.remove(fn)
+
+
+def test_format_nonexistent(tmp_path):
+    """Test for nonexistent format."""
+
+    # set up file
+    fn = str(tmp_path) + "/test7.fits"
+    arr = np.zeros((5, 2048, 2048), dtype=np.uint16)
+    for j in range(5):
+        arr[j, 4:-4, 4:-4] = 1000 * (j + 1)
+    arr[4, 300, 700] = 25000
+    hdulist = [fits.PrimaryHDU()]
+    for t in range(5):
+        hdulist.append(fits.ImageHDU(65535 - arr[t, :, :]))
+    fits.HDUList(hdulist).writeto(fn, overwrite=True)
+    fmt = -1
+
+    # now the tests
+    with pytest.raises(ValueError):
+        get_num_slices(fmt, fn)
+    with pytest.raises(ValueError):
+        load_segment(fn, fmt, [698, 702, 298, 302], [5], True, use_fitsio=False)
 
     os.remove(fn)
