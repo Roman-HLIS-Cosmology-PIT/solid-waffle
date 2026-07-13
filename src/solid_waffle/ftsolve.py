@@ -273,22 +273,6 @@ def op2_to_pars(op2, cmin=0.01):
     return [omega, cxx, cxy, cyy, eps, j_iter]
 
 
-def p2kernel_test():
-    """
-    Test function for p2kernel.
-    """
-
-    for i in range(4):
-        s = 0.4 / 2**i
-        cov = [s**2, 0.5 * s**2, s**2]
-        print(i, cov)
-        print(op2_to_pars(0.05 * p2kernel(cov, 2)))
-        cov = [1.1 * s**2, -0.8 * s**2, 0.9 * s**2]
-        print(i, cov)
-        print(op2_to_pars(0.05 * p2kernel(cov, 2)))
-        print(op2_to_pars(0.025 * p2kernel(cov, 2) + 0.025 * p2kernel([s**2, 0, s**2], 2)))
-
-
 def solve_corr(bfek, N, I_, g, betas, sigma_a, tslices, avals, avals_nl=[0, 0, 0], outsize=2):  # noqa: B006
     """
     Predicts the unequal-time correlation function C_{abcd}(Delta i, Delta j).

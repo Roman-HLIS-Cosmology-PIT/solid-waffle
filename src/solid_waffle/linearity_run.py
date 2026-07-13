@@ -353,12 +353,12 @@ def build_linearity_file(infile):
 
     # 4D or 3D to 2D projection, displaying lots of strips left to right for visualization
     # (not actually needed in the final script)
-    def to2D(arr):
-        d = np.shape(arr)
-        if len(d) == 4:
-            return np.transpose(arr, axes=(2, 0, 1, 3)).reshape(d[2], -1)
-        else:
-            return np.transpose(arr, axes=(1, 0, 2)).reshape(d[1], -1)
+    # def to2D(arr):
+    #     d = np.shape(arr)
+    #     if len(d) == 4:
+    #         return np.transpose(arr, axes=(2, 0, 1, 3)).reshape(d[2], -1)
+    #     else:
+    #         return np.transpose(arr, axes=(1, 0, 2)).reshape(d[1], -1)
 
     # now OK to convert to float32
     image_all = image_all.astype(np.float32)

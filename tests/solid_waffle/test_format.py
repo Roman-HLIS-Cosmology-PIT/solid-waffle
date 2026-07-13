@@ -7,9 +7,12 @@ import numpy as np
 import pytest
 from astropy.io import fits
 from solid_waffle.pyirc import (
+    IndexDictionary,
+    gen_nl_cube,
     get_nside,
     get_num_slices,
     load_segment,
+    pixel_data,
     ref_array,
     ref_array_block,
     ref_array_onerow,
@@ -135,6 +138,7 @@ def test_format6(tmp_path):
         arr[j, 4:-4, 4:-4] = 1000 * (j + 1)
     arr[4, 300, 700] = 25000
     arr[4, :512, :4] = 50
+    arr[:, 2560:2688, 1536:1664] = np.array([1000, 1490, 1960, 2410, 2840])[:, None, None]
     hdulist = [fits.PrimaryHDU(), fits.ImageHDU(arr[None, ...])]
     fits.HDUList(hdulist).writeto(fn, overwrite=True)
     fmt = 6
@@ -171,6 +175,24 @@ def test_format6(tmp_path):
     assert np.allclose(ra[:, 1, :], ra3)
     with pytest.raises(ValueError):
         ref_array_block([fn], fmt, [256], [3, 5], True)
+
+    # polynomial cube
+    swi = IndexDictionary(0)
+    swi.addhnl(3)
+    output_array, fit_array, deriv_array, coefs_array = gen_nl_cube(
+        [fn], fmt, [1, 1, 5], (32, 32), 0.0, "abs", swi, True
+    )
+    assert np.shape(output_array) == (5, 32, 32)
+    assert np.shape(fit_array) == (5, 32, 32)
+    assert np.shape(deriv_array) == (5, 32, 32)
+    assert np.shape(coefs_array) == (4, 32, 32)
+    assert np.all(np.abs(coefs_array[:, 20, 12] - np.array([0, 500, -10, 0])) < 1.0e-5)
+    assert np.all(np.abs(coefs_array[:, 21, 12] - np.array([0, 1000, 0, 0])) < 1.0e-5)
+
+    # pixel data
+    pixarr = pixel_data([fn], fmt, [1536, 1664, 2560, 2624], [2, 3], [], True)
+    assert np.shape(pixarr) == (2, 2, 64, 128)
+    assert np.all(pixarr[1] == 1)
 
     os.remove(fn)
 
