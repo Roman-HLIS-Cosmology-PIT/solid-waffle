@@ -129,28 +129,25 @@ def p2kernel(cov, np2, N_integ=256):
 
     """
 
-    use_extrule = True  # turn off only for de-bugging
-
     NN_integ = 2 * N_integ + 1  # dimension of integration region
 
     # Integration weights -- 2D array
     w = np.zeros(NN_integ)
-    if use_extrule:
-        if N_integ < 8:
-            print("Error: N_integ in p2kernel must be at least 8.")
-            exit()
-        for i in range(1, N_integ + 1):
-            w[i] = i / N_integ**2
-        w[N_integ] *= 3.0 / 4.0
-        w[1] *= 7.0 / 6.0
-        w[N_integ - 1] *= 7.0 / 6.0
-        w[2] *= 23.0 / 24.0
-        w[N_integ - 2] *= 23.0 / 24.0
-        w[N_integ + 1 :] = np.flip(w[:N_integ])
-        w[N_integ + 1 :] = np.flip(w[:N_integ])
-    else:
-        for i in range(N_integ + 1):
-            w[2 * N_integ - i] = w[i] = i / N_integ**2
+    if N_integ < 8:
+        raise ValueError("Error: N_integ in p2kernel must be at least 8.")
+    for i in range(1, N_integ + 1):
+        w[i] = i / N_integ**2
+    w[N_integ] *= 3.0 / 4.0
+    w[1] *= 7.0 / 6.0
+    w[N_integ - 1] *= 7.0 / 6.0
+    w[2] *= 23.0 / 24.0
+    w[N_integ - 2] *= 23.0 / 24.0
+    w[N_integ + 1 :] = np.flip(w[:N_integ])
+    w[N_integ + 1 :] = np.flip(w[:N_integ])
+
+    # old method:
+    #    for i in range(N_integ + 1):
+    #        w[2 * N_integ - i] = w[i] = i / N_integ**2
 
     ww = np.outer(w, w)
 

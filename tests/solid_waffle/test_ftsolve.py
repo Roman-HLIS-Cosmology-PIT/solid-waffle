@@ -2,7 +2,14 @@
 
 import numpy as np
 import pytest
-from solid_waffle.ftsolve import op2_to_pars, p2kernel, solve_corr, solve_corr_vis
+from solid_waffle.ftsolve import op2_to_pars, p2kernel, pad_to_N, solve_corr, solve_corr_vis
+
+
+def test_nopad():
+    """Test pass-through for small N."""
+
+    arr = np.linspace(5, 10, 25).reshape((5, 5))
+    assert np.allclose(arr, pad_to_N(arr, 5))
 
 
 def test_p2kernel():
@@ -25,6 +32,10 @@ def test_p2kernel():
         pars = op2_to_pars(0.025 * p2kernel(cov, 2) + 0.025 * p2kernel([s**2, 0, s**2], 2))
         print(i, (pars[0] / (1 + pars[0]) - 0.05) * 4**i)
         assert -0.001 < (pars[0] / (1 + pars[0]) - 0.05) * 4**i < -0.0006
+
+    # test error
+    with pytest.raises(ValueError):
+        p2kernel(cov, 2, N_integ=4)
 
 
 def test_solve_corr():
@@ -93,5 +104,15 @@ def test_solve_corr():
         solve_corr(test_bfek[1:-1, :], N, I_, g, betas, sigma_a, tslices, avals, avals_nl)
     with pytest.raises(ValueError):
         c_abcd = solve_corr_vis(
-            test_bfek[1:-1, :], N, I_, g, betas, sigma_a, tslices, avals, avals_nl=avals_nl, omega=0, p2=0
+            test_bfek[1:-1, :],
+            N,
+            I_,
+            g,
+            betas,
+            sigma_a,
+            tslices,
+            avals,
+            avals_nl=avals_nl,
+            omega=1.0e-12,
+            p2=np.ones((3, 3)) / 9.0,
         )
