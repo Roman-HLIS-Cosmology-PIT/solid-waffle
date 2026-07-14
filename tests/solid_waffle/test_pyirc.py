@@ -3,7 +3,7 @@
 
 import numpy as np
 import pytest
-from solid_waffle.pyirc import gain_alphacorr, IndexDictionary, pyIRC_percentile, slidemed_percentile
+from solid_waffle.pyirc import IndexDictionary, gain_alphacorr, pyIRC_percentile, slidemed_percentile
 
 
 def test_indexerr():
