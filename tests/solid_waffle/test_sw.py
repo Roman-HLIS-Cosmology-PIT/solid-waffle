@@ -372,3 +372,38 @@ def test_run(tmp_path):
     c, m = np.linalg.lstsq(_x, _y)[0]
     assert -1 < c < 1
     assert 0.0005 < m < 0.0015
+
+    # and with SLIDEMED and TIMEREF: 1
+    with open(temp_dir + "/analyze_cfg.txt", "w") as f:
+        f.write(analyze_cfg)
+        f.write("IPCSUB: True\n")
+        f.write("HOTPIX: 400 2400 0.1 0.08\n")
+        f.write("HOTPIX SLIDEMED\n")
+        f.write("NARROWFIG\n")
+        f.write("TIMEREF: 1\n")
+    run_ir_all(temp_dir + "/analyze_cfg.txt")
+    hot = np.loadtxt(f"{temp_dir}/analysis_hot.txt")
+    (nh2, ncol) = np.shape(hot)
+    assert 0.2 < nh2 / nh < 0.4
+    assert ncol == 18
+    nrec = 0
+    for j in range(nh):
+        nrec += np.count_nonzero(np.logical_and(x[j] == hot[:, 0], y[j] == hot[:, 1]))
+    assert 9 * nh2 // 10 <= nrec <= nh2
+
+    # see what SLIDEMED did
+    diff = np.amax(np.abs(np.mean(data, axis=0) - expected_outputs) / tol)
+    print(diff)
+    assert diff < 1.0
+
+    # linear fits
+    _x = np.ones((nh2, 2))
+    _x[:, 1] = hot[:, -5] + 4 * (hot[:, -4] + hot[:, -1])
+    _y = hot[:, -4]
+    c, m = np.linalg.lstsq(_x, _y)[0]
+    assert -1 < c < 1
+    assert 0.009 < m < 0.011
+    _y = hot[:, -1]
+    c, m = np.linalg.lstsq(_x, _y)[0]
+    assert -1 < c < 1
+    assert 0.0005 < m < 0.0015

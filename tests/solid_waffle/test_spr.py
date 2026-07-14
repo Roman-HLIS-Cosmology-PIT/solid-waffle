@@ -53,20 +53,47 @@ def test_spr(tmp_path):
             "-sca=999",
             "-i",
             "-a=1",
-        ]
+        ],
+        verbose=True,
     )
 
     # now check the outputs
     alphamap = str(tmp_path) + "/SPRALL_alpha.fits"
-    cleanup.append(alphamap)
+    cleanup2 = [alphamap]
     target = [0.018, 0.015, 0.001, 0.018, 0.001, 0.015, 0.001, 0.018, 0.001, 0.015, 0.001, 0.0165, 0.0]
     with fits.open(alphamap) as amap:
         assert np.shape(amap[0].data) == (13, 512, 512)
         for j in range(13):
             assert np.all(amap[0].data[j] < target[j] + 0.0004)
             assert np.all(amap[0].data[j] > target[j] - 0.0004)
-    cleanup.append(str(tmp_path) + "/SPRALL_sprmean.fits")
-    cleanup.append(str(tmp_path) + "/SPRALL_sprdark.fits")
+    cleanup2.append(str(tmp_path) + "/SPRALL_sprmean.fits")
+    cleanup2.append(str(tmp_path) + "/SPRALL_sprdark.fits")
 
-    for f in cleanup:
+    # try again in dict mode
+    for f in cleanup2:
+        os.remove(f)
+
+    run_spr_reduce(
+        {
+            "IN": stem + "spr_001.fits",
+            "OUT": str(tmp_path) + "/SPRALL",
+            "-f": fmt,
+            "-n": 3,
+            "-p": 1,
+            "-d": stem + "dark_001.fits",
+            "-nd": 2,
+            "-sca": 999,
+            "-i": True,
+            "-a": 1,
+        },
+        verbose=True,
+    )
+    target = [0.018, 0.015, 0.001, 0.018, 0.001, 0.015, 0.001, 0.018, 0.001, 0.015, 0.001, 0.0165, 0.0]
+    with fits.open(alphamap) as amap:
+        assert np.shape(amap[0].data) == (13, 512, 512)
+        for j in range(13):
+            assert np.all(amap[0].data[j] < target[j] + 0.0004)
+            assert np.all(amap[0].data[j] > target[j] - 0.0004)
+
+    for f in cleanup + cleanup2:
         os.remove(f)
