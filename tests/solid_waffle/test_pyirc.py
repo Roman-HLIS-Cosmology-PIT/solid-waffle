@@ -3,7 +3,7 @@
 
 import numpy as np
 import pytest
-from solid_waffle.pyirc import IndexDictionary, pyIRC_percentile, slidemed_percentile
+from solid_waffle.pyirc import gain_alphacorr, IndexDictionary, pyIRC_percentile, slidemed_percentile
 
 
 def test_indexerr():
@@ -42,3 +42,9 @@ def test_slidemed():
     for p in [25, 50, 75]:
         vals.append(slidemed_percentile(x, y, p))
     assert np.allclose(vals, [0.02083919936463357, 0.025, 0.029160800635366434])
+
+
+def test_return_gain_alphacorr():
+    """Test failure of gain_alpha_corr."""
+
+    assert len(gain_alphacorr(1.0, 100.0, 100.0, 100.0)) == 0

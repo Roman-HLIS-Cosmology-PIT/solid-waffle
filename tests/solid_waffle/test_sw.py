@@ -157,6 +157,7 @@ def test_run(tmp_path):
             illum = 0.0
             ty = "dark"
 
+        nlstr = "quadratic 1.4" if k != 2 else "quartic 1.4 0 0"
         sim_cfg = (
             "FORMAT: 1001\n"
             "NREADS: 20\n"
@@ -172,7 +173,7 @@ def test_run(tmp_path):
             "WAVEMODE: ir\n"
             "BFE: true\n"
             "L_IPC: true 0.01\n"
-            "NL: quadratic 1.4\n"
+            f"NL: {nlstr}\n"
             f"OUTPUT: {temp_dir}/{ty}_{k+1:03d}.fits\n"
         )
 

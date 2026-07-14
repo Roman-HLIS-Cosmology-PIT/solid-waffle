@@ -247,6 +247,9 @@ def test_format2001(tmp_path):
     x = load_segment(fn, fmt, [698, 702, 298, 302], [5], True)
     assert np.allclose(x, test)
 
+    x = load_segment(fn, fmt, [698, 702, 298, 302], [5, 5], True)
+    assert np.allclose(x[0], x[1])
+
     os.remove(fn)
 
 

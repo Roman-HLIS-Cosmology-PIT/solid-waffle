@@ -4,6 +4,7 @@ import os
 
 import asdf
 import numpy as np
+import pytest
 from astropy.io import fits
 from numpy.random import RandomState
 from scipy.optimize import curve_fit
@@ -329,6 +330,52 @@ def test_intlin(tmp_path):
         assert meta["telescope"] == "ROMAN"
         for _x in ["author", "date", "description", "pedigree", "useafter"]:
             assert meta[_x] is not None
+
+    # test exceptions
+    with pytest.raises(ValueError):
+        run_noise(
+            {
+                "-f": 6,
+                "-o": tmp_path + "/noiseprop.fits",
+                "-n": 4,
+                "-t": 1,
+                "-cd": 6.0,
+                "-rh": 7,
+                "-tn": 11,
+                "-ro": True,
+            },
+            verbose=True,
+        )
+    with pytest.raises(ValueError):
+        run_noise(
+            {
+                "-f": 6,
+                "-i": tmp_path + "/99999999_data_dark_001.fits",
+                "-n": 4,
+                "-t": 1,
+                "-cd": 6.0,
+                "-rh": 7,
+                "-tn": 11,
+                "-ro": True,
+            },
+            verbose=True,
+        )
+    with pytest.raises(ValueError):
+        run_noise(
+            {
+                "-f": 6,
+                "-i": tmp_path + "/99999999_data_dark_001.fits",
+                "-o": tmp_path + "/noiseprop.fits",
+                "-n": 20,
+                "-t": 1,
+                "-cd": 6.0,
+                "-rh": 7,
+                "-tn": 11,
+                "-nch": 32,
+                "-ro": True,
+            },
+            verbose=True,
+        )
 
     # cleanup
     for f in cleanuplist:

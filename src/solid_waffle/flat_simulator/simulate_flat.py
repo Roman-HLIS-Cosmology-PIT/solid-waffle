@@ -414,8 +414,6 @@ class Simulation:
             data_cube_Q[:, xmin:xmax, ymin:ymax] = calculate_ipc(
                 data_cube_Q[:, xmin:xmax, ymin:ymax], self.pars["lipc_alpha"]
             )
-        else:
-            pass
 
         # Apply non-linearity if mode turned on; assumed to act after IPC
         if self.pars["nlmode"] == "quadratic":
