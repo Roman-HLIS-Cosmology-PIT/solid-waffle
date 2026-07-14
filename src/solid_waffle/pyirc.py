@@ -78,6 +78,8 @@ import scipy.stats
 from astropy.io import fits
 from scipy.signal import fftconvolve
 
+import solid_waffle  # noqa: F401
+
 from .ftsolve import (
     decenter,
     pad_to_N,
@@ -101,7 +103,7 @@ Test_SubBeta = False
 
 def get_version():
     """Version number of script"""
-    return 37
+    return globals()["solid_waffle"].__version__
 
 
 def get_nside(formatpars):
