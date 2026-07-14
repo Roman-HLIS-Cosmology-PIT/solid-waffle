@@ -396,9 +396,7 @@ def build_linearity_file(infile):
     )
 
     # where the input data came from ...
-    pedigree = "DUMMY"
-    if "PEDIGREE" in pars:
-        pedigree = pars["PEDIGREE"]
+    pedigree = pars.get("PEDIGREE", "DUMMY")
 
     # ASDF output
     tree = {

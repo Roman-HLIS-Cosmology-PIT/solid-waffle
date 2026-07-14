@@ -157,7 +157,7 @@ def test_run(tmp_path):
             illum = 0.0
             ty = "dark"
 
-        nlstr = "quadratic 1.4" if k != 2 else "quartic 1.4 0 0"
+        nlstr = "quadratic 1.4" if k != 2 else "quartic -1.4 0 0"
         sim_cfg = (
             "FORMAT: 1001\n"
             "NREADS: 20\n"
