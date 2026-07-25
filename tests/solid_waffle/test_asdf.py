@@ -79,6 +79,9 @@ def test_tvac(tmp_path):
             ydict = yaml.safe_load("".join(f["CONFIG"].data["config"]))
             assert ydict["roman"]["data"]["shape"] == [4, 4096, 4096]
 
+            print(f["CONFIG"].header)
+            print(yaml.safe_load("".join(f["CONFIG"].data["config"])))
+
         os.remove(ofile)
 
 
@@ -183,4 +186,14 @@ def test_flight(tmp_path):
         assert np.all(f[0].data == datacubes[1])
         assert 3.149 < f[0].header["TGROUP"] < 3.151
         assert 3.149 < f[0].header["TFRAME"] < 3.151
+
+    # check OK if file already exists
+    with chdir(tmp_path / "IN"):
+        asdf_to_fits.main(fmatch="im02.asdf", format="flight_eng")
+    ofile = str(tmp_path) + "/IN_fits_converted/im02_asdf_to.fits"
+    with fits.open(ofile) as f:
+        assert np.all(f[0].data == datacubes[1])
+        assert 3.149 < f[0].header["TGROUP"] < 3.151
+        assert 3.149 < f[0].header["TFRAME"] < 3.151
     os.remove(ofile)
+
