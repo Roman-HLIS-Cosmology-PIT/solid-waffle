@@ -7,7 +7,7 @@ import numpy as np
 from astropy.io import fits
 
 
-def main(input_dir=None, output_dir=None, match="*.asdf", format="wfi_tvac"):
+def main(input_dir=None, output_dir=None, fmatch="*.asdf", format="wfi_tvac"):
     """
     Converts all asdf files in a directory to fits files in a new directory
 
@@ -18,7 +18,7 @@ def main(input_dir=None, output_dir=None, match="*.asdf", format="wfi_tvac"):
     output_dir : str, optional
         The output directory; defaults to a copy of the current directory name with
         ``_fits_converted`` appended.
-    match : str, optional
+    fmatch : str, optional
         Regular expression string to match filenames (glob-style); default is to take
         all asdf files.
     format : str, optional
@@ -46,7 +46,7 @@ def main(input_dir=None, output_dir=None, match="*.asdf", format="wfi_tvac"):
         output_dir = os.path.join(parent_dir, current_dir_name + "_fits_converted")
 
     os.makedirs(output_dir, exist_ok=True)
-    asdf_files = glob.glob(os.path.join(input_dir, match))
+    asdf_files = glob.glob(os.path.join(input_dir, fmatch))
     print("ASDF files found: ")
     for fn in asdf_files:
         print(fn)

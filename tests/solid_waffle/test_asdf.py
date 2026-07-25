@@ -140,3 +140,22 @@ def test_flight(tmp_path):
             assert 3.149 < f[0].header["TFRAME"] < 3.151
 
         os.remove(ofile)
+
+    # test glob functionality
+    asdf_to_fits.main(input_dir=str(tmp_path) + "/IN", output_dir=str(tmp_path) + "/OUT", fmatch=f"im?1.asdf", format="flight_eng")
+    for ifile in range(3):
+        ofile = str(tmp_path) + f"/OUT/im{ifile+1:02d}_asdf_to.fits"
+        if ifile + 1 == 1:
+            os.remove(ofile)
+        else:
+            assert not os.path.exists(ofile)
+
+    # another test for glob functionality
+    asdf_to_fits.main(input_dir=str(tmp_path) + "/IN", output_dir=str(tmp_path) + "/OUT", fmatch=f"im0[13].asdf", format="flight_eng")
+    for ifile in range(3):
+        ofile = str(tmp_path) + f"/OUT/im{ifile+1:02d}_asdf_to.fits"
+        if ifile + 1 in [1, 3]:
+            os.remove(ofile)
+        else:
+            assert not os.path.exists(ofile)
+
