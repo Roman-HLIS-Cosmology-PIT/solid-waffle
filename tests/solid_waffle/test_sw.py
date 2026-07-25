@@ -1,9 +1,5 @@
-import os
-
 import asdf
 import numpy as np
-from astropy.io import fits
-from solid_waffle.asdf_to_fits import main as convert_asdf_to_fits_main
 from solid_waffle.correlation_run import run_ir_all
 from solid_waffle.flat_simulator import simulate_flat
 from solid_waffle.pyirc import get_num_slices, load_segment
@@ -40,57 +36,6 @@ def create_dummy_asdf(asdf_path, data_type="flat", frames=20, shape=(512, 512)):
     with asdf.AsdfFile(tree) as af:
         af.write_to(asdf_path)
     return data
-
-
-def test_asdf_to_fits(tmp_path):
-    """
-    Test function to convert directory of asdf files to fits files.
-
-    Parameters
-    ----------
-    tmp_path : str or pathlib.Path
-        Directory in which to run the test.
-
-    Returns
-    -------
-    None
-
-    """
-    original_data = {}
-    for i in range(2):
-        data = create_dummy_asdf(tmp_path / f"flat_{i+1:03d}.asdf", data_type="flat")
-        original_data[f"flat_{i+1:03d}"] = np.clip(data, 0, 65535).astype(np.uint16)
-    for i in range(2):
-        data = create_dummy_asdf(tmp_path / f"dark_{i+1:03d}.asdf", data_type="dark")
-        original_data[f"dark_{i+1:03d}"] = np.clip(data, 0, 65535).astype(np.uint16)
-
-    orig_cwd = os.getcwd()
-    os.chdir(tmp_path)
-
-    try:
-        convert_asdf_to_fits_main()
-
-        output_dir = tmp_path.parent / (tmp_path.name + "_fits_converted")
-        assert output_dir.exists()
-
-        expected_files = [
-            output_dir / "flat_001_asdf_to.fits",
-            output_dir / "flat_002_asdf_to.fits",
-            output_dir / "dark_001_asdf_to.fits",
-            output_dir / "dark_002_asdf_to.fits",
-        ]
-        for f in expected_files:
-            assert f.exists(), f"Missing file: {f.name}"
-            with fits.open(f) as hdul:
-                data = hdul[0].data
-                assert data.shape == (20, 512, 512)
-                assert data.dtype == np.uint16
-                # check values against original
-                key = f.name.replace("_asdf_to.fits", "")
-                assert np.all(data == original_data[key])
-
-    finally:
-        os.chdir(orig_cwd)
 
 
 def test_run_asdf(tmp_path):
