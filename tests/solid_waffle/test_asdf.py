@@ -1,4 +1,5 @@
 import os
+from contextlib import chdir
 
 import asdf
 import numpy as np
@@ -158,4 +159,14 @@ def test_flight(tmp_path):
             os.remove(ofile)
         else:
             assert not os.path.exists(ofile)
+
+    # test directory functionality
+    with chdir(tmp_path / "IN"):
+        asdf_to_fits.main(fmatch="im02.asdf", format="flight_eng")
+    ofile = str(tmp_path) + "/IN_fits_converted/im02_asdf_to.fits"
+    with fits.open(ofile) as f:
+        assert np.all(f[0].data == datacubes[1])
+        assert 3.149 < f[0].header["TGROUP"] < 3.151
+        assert 3.149 < f[0].header["TFRAME"] < 3.151    
+    os.remove(ofile)
 
