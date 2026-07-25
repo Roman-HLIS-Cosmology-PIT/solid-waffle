@@ -3,6 +3,7 @@ from contextlib import chdir
 
 import asdf
 import numpy as np
+import yaml
 from astropy.io import fits
 from solid_waffle import asdf_to_fits
 
@@ -74,6 +75,10 @@ def test_tvac(tmp_path):
             assert 3.149 < f[0].header["TGROUP"] < 3.151
             assert 3.149 < f[0].header["TFRAME"] < 3.151
 
+            assert f["CONFIG"].header["ORIGFILE"] == f"im{ifile+1:02d}.asdf"
+            ydict = yaml.safe_load("".join(f["CONFIG"].data["config"]))
+            assert ydict["roman"]["data"]["shape"] == [4, 4096, 4096]
+
         os.remove(ofile)
 
 
@@ -143,7 +148,12 @@ def test_flight(tmp_path):
         os.remove(ofile)
 
     # test glob functionality
-    asdf_to_fits.main(input_dir=str(tmp_path) + "/IN", output_dir=str(tmp_path) + "/OUT", fmatch=f"im?1.asdf", format="flight_eng")
+    asdf_to_fits.main(
+        input_dir=str(tmp_path) + "/IN",
+        output_dir=str(tmp_path) + "/OUT",
+        fmatch="im?1.asdf",
+        format="flight_eng",
+    )
     for ifile in range(3):
         ofile = str(tmp_path) + f"/OUT/im{ifile+1:02d}_asdf_to.fits"
         if ifile + 1 == 1:
@@ -152,7 +162,12 @@ def test_flight(tmp_path):
             assert not os.path.exists(ofile)
 
     # another test for glob functionality
-    asdf_to_fits.main(input_dir=str(tmp_path) + "/IN", output_dir=str(tmp_path) + "/OUT", fmatch=f"im0[13].asdf", format="flight_eng")
+    asdf_to_fits.main(
+        input_dir=str(tmp_path) + "/IN",
+        output_dir=str(tmp_path) + "/OUT",
+        fmatch="im0[13].asdf",
+        format="flight_eng",
+    )
     for ifile in range(3):
         ofile = str(tmp_path) + f"/OUT/im{ifile+1:02d}_asdf_to.fits"
         if ifile + 1 in [1, 3]:
@@ -167,6 +182,5 @@ def test_flight(tmp_path):
     with fits.open(ofile) as f:
         assert np.all(f[0].data == datacubes[1])
         assert 3.149 < f[0].header["TGROUP"] < 3.151
-        assert 3.149 < f[0].header["TFRAME"] < 3.151    
+        assert 3.149 < f[0].header["TFRAME"] < 3.151
     os.remove(ofile)
-

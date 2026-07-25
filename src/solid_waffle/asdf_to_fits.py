@@ -77,7 +77,21 @@ def main(input_dir=None, output_dir=None, fmatch="*.asdf", format="wfi_tvac"):
             h = fits.PrimaryHDU(alldata)
             h.header["TFRAME"] = f["roman"]["meta"]["exposure"]["frame_time"]
             h.header["TGROUP"] = f["roman"]["meta"]["exposure"]["frame_time"]
-            h.writeto(new_file_path, overwrite=True)
+
+            # metadata
+            ca = list(str(asdf.util.load_yaml(str(fn))))
+            h2 = fits.BinTableHDU.from_columns(
+                [
+                    fits.Column(
+                        name="config",
+                        format="1A",
+                        array=ca,
+                    )
+                ],
+            )
+            h2.header["EXTNAME"] = "CONFIG"
+            h2.header["ORIGFILE"] = str(fn).split("/")[-1]
+            fits.HDUList([h, h2]).writeto(new_file_path, overwrite=True)
 
 
 if __name__ == "__main__":
