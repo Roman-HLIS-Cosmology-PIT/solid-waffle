@@ -196,4 +196,3 @@ def test_flight(tmp_path):
         assert 3.149 < f[0].header["TGROUP"] < 3.151
         assert 3.149 < f[0].header["TFRAME"] < 3.151
     os.remove(ofile)
-
