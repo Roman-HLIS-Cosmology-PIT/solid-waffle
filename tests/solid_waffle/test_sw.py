@@ -1,5 +1,6 @@
 import asdf
 import numpy as np
+from astropy.io import fits
 from solid_waffle.correlation_run import run_ir_all
 from solid_waffle.flat_simulator import simulate_flat
 from solid_waffle.pyirc import get_num_slices, load_segment
