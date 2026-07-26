@@ -46,6 +46,8 @@ Some available help on:
 
 * `Single pixel reset script <docs/SPR.rst>`_.
 
+* `Converting ASDF files <docs/asdf.rst>`_.
+
 **Note**: If you want the old (non-module) interface, you can use the scripts in ``legacy_scripts/``. But we anticipate that most new code won't use that.
 
 Files Description

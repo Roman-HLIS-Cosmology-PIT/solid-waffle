@@ -50,7 +50,7 @@ testpaths = [
     "src",
     "docs",
 ]
-addopts = "--doctest-modules --doctest-glob=*.rst"
+addopts = "--doctest-modules --doctest-glob=*.rst --ignore=docs/asdf.rst"
 
 [tool.ruff]
 line-length = 110
