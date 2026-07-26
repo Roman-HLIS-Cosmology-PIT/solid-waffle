@@ -129,28 +129,25 @@ def p2kernel(cov, np2, N_integ=256):
 
     """
 
-    use_extrule = True  # turn off only for de-bugging
-
     NN_integ = 2 * N_integ + 1  # dimension of integration region
 
     # Integration weights -- 2D array
     w = np.zeros(NN_integ)
-    if use_extrule:
-        if N_integ < 8:
-            print("Error: N_integ in p2kernel must be at least 8.")
-            exit()
-        for i in range(1, N_integ + 1):
-            w[i] = i / N_integ**2
-        w[N_integ] *= 3.0 / 4.0
-        w[1] *= 7.0 / 6.0
-        w[N_integ - 1] *= 7.0 / 6.0
-        w[2] *= 23.0 / 24.0
-        w[N_integ - 2] *= 23.0 / 24.0
-        w[N_integ + 1 :] = np.flip(w[:N_integ])
-        w[N_integ + 1 :] = np.flip(w[:N_integ])
-    else:
-        for i in range(N_integ + 1):
-            w[2 * N_integ - i] = w[i] = i / N_integ**2
+    if N_integ < 8:
+        raise ValueError("Error: N_integ in p2kernel must be at least 8.")
+    for i in range(1, N_integ + 1):
+        w[i] = i / N_integ**2
+    w[N_integ] *= 3.0 / 4.0
+    w[1] *= 7.0 / 6.0
+    w[N_integ - 1] *= 7.0 / 6.0
+    w[2] *= 23.0 / 24.0
+    w[N_integ - 2] *= 23.0 / 24.0
+    w[N_integ + 1 :] = np.flip(w[:N_integ])
+    w[N_integ + 1 :] = np.flip(w[:N_integ])
+
+    # old method:
+    #    for i in range(N_integ + 1):
+    #        w[2 * N_integ - i] = w[i] = i / N_integ**2
 
     ww = np.outer(w, w)
 
@@ -229,23 +226,20 @@ def op2_to_pars(op2, cmin=0.01):
         derr = -omegabar * (p2kernel([(1 + dstep) * cxx, cxy, cyy], this_np2, N) - p2) / (dstep * cxx)
         cxx -= cf * np.sum(err * derr) / np.sum(derr**2)
         cxxmin = cxy**2 / (cyy - cmin**2) + cmin**2
-        if cxx < cxxmin:
-            cxx = cxxmin * 1.000000001
+        cxx = max(cxx, cxxmin * 1.000000001)
         # update cyy
         p2 = p2kernel([cxx, cxy, cyy], this_np2, N)
         err = this_op2 - omegabar * p2
         derr = -omegabar * (p2kernel([cxx, cxy, (1 + dstep) * cyy], this_np2) - p2) / (dstep * cyy)
         cyy -= cf * np.sum(err * derr) / np.sum(derr**2)
         cyymin = cxy**2 / (cxx - cmin**2) + cmin**2
-        if cyy < cyymin:
-            cyy = cyymin * 1.000000001
+        cyy = max(cyy, cyymin * 1.000000001)
         # update cxy
         p2 = p2kernel([cxx, cxy, cyy], this_np2, N)
         err = this_op2 - omegabar * p2
         dcxy = dstep * np.sqrt(cxx * cyy)
         cxylim = np.sqrt((cxx - cmin**2) * (cyy - cmin**2)) / 1.000000001
-        if dcxy > np.abs(cxylim - np.abs(cxy)):
-            dcxy = np.abs(cxylim - np.abs(cxy))
+        dcxy = min(dcxy, np.abs(cxylim - np.abs(cxy)))
         derr = (
             -omegabar
             * (
@@ -271,22 +265,6 @@ def op2_to_pars(op2, cmin=0.01):
         warnings.warn("op2_to_pars: failed to converge")
     omega = omegabar / (1 - omegabar)
     return [omega, cxx, cxy, cyy, eps, j_iter]
-
-
-def p2kernel_test():
-    """
-    Test function for p2kernel.
-    """
-
-    for i in range(4):
-        s = 0.4 / 2**i
-        cov = [s**2, 0.5 * s**2, s**2]
-        print(i, cov)
-        print(op2_to_pars(0.05 * p2kernel(cov, 2)))
-        cov = [1.1 * s**2, -0.8 * s**2, 0.9 * s**2]
-        print(i, cov)
-        print(op2_to_pars(0.05 * p2kernel(cov, 2)))
-        print(op2_to_pars(0.025 * p2kernel(cov, 2) + 0.025 * p2kernel([s**2, 0, s**2], 2)))
 
 
 def solve_corr(bfek, N, I_, g, betas, sigma_a, tslices, avals, avals_nl=[0, 0, 0], outsize=2):  # noqa: B006
@@ -332,7 +310,7 @@ def solve_corr(bfek, N, I_, g, betas, sigma_a, tslices, avals, avals_nl=[0, 0, 0
         betas = np.array([betas])
 
     if bfek.shape[1] != bfek.shape[0]:
-        warnings.warn("WARNING: convolved BFE kernel (BFEK) not square.")
+        raise ValueError("Convolved BFE kernel (BFEK) not square.")
 
     assert N == 2 * (N // 2) + 1
 
@@ -585,7 +563,7 @@ def solve_corr_vis(
             betas = np.array([betas])
 
         if bfek.shape[1] != bfek.shape[0]:
-            warnings.warn("WARNING: convolved BFE kernel (BFEK) not square.")
+            raise ValueError("Convolved BFE kernel (BFEK) not square.")
 
         assert N == 2 * (N // 2) + 1
 
@@ -751,45 +729,3 @@ def solve_corr_vis_many(
         cf += solve_corr_vis(bfek, N, I_, g, betas, sigma_a, this_t, avals, avals_nl, outsize, omega, p2)
     cf /= tn + 0.0
     return cf
-
-
-if __name__ == "__main__":
-    """
-   Test against configuration-space corrfn generated from known inputs/simulated flats.
-   """
-
-    N = 21
-    I_ = 1487
-    g = 2.06
-    betas = np.array([1e-3, 5e-4])
-    tslices = [3, 11, 13, 21]
-    avals = [0, 0, 0]
-    avals_nl = [0, 0, 0]
-
-    test_bfek = 1.0e-6 * np.array(
-        [
-            [-0.01, 0.0020, -0.0210, -0.019, 0.028],
-            [0.0040, 0.0490, 0.2480, 0.01, -0.0240],
-            [-0.0170, 0.2990, -1.372, 0.2840, 0.0150],
-            [0.0130, 0.0560, 0.2890, 0.0390, 0.02],
-            [0.035, 0.0070, 0.0380, 0.0010, 0.026],
-        ]
-    )
-
-    # test_bfek = np.load('/users/PCON0003/cond0088/Projects/detectors/solid-waffle/'
-    #                     'testBFEK_flatsim_matcheddark_bfeonly18237sim_10files_sub20.npy')
-    sigma_a = np.sum(test_bfek)
-
-    # Test against BFEK values in run of test_run.py with input config.18237.sample1
-    # N = 21
-    # I_ = 1378
-    # g = 2.26
-    # beta = 5.98e-7
-    # sigma_a = 0.0
-    # tslices = [3, 11, 13, 21]
-    # avals = [0.014,0.023,0]
-    # avals_nl = [0,0,0]
-    # test_bfek = np.load('test_bfek.npy')
-
-    c_abcd = solve_corr(test_bfek, N, I_, g, betas, sigma_a, tslices, avals, avals_nl)
-    print(c_abcd)

@@ -89,7 +89,7 @@ The options fall into a few categories:
 
   * 4: H4RG-10, descending ramps (signal level in DN decreases during a flat). The images are in HDU #1, with ``NAXIS`` = 4, ``NAXIS1`` = ``NAXIS2`` = 4096, ``NAXIS3`` = [number of time slices], and ``NAXIS4`` = 1. (Used for some of the QE data.)
 
-  * 5: H4RG-10, descending ramps.  The images are in HDU #1, with ``NAXIS1`` = ``NAXIS2`` = 4096, ``NAXIS3`` = [number of time slices]. (Used by PPL.)
+  * 5: H4RG-10, ascending ramps.  The images are in HDU #0, with ``NAXIS1`` = ``NAXIS2`` = 4096, ``NAXIS3`` = [number of time slices]. (Used by PPL.)
 
   * 6: H4RG-10, ascending ramps. The images are in HDU #1, with ``NAXIS`` = 4, ``NAXIS1`` = 4096 or 4224 (latter includes reference output as 33rd channel), ``NAXIS2`` = 4096, ``NAXIS3`` = [number of time slices], and ``NAXIS4`` = 1. (Used for triplet testing.)
 
@@ -101,7 +101,9 @@ The options fall into a few categories:
 
 * Roman TVAC and flight-like data
 
-  * ( *not yet enabled* )
+  * 2001: H4RG-10, ascending ramps. The images are in ``["roman"]["data"]``, shape ([number of time slices], 4096, 4096).
+
+  * 2002: Like 2001, but for testing only (512x512 array).
 
 NBIN
 ----

@@ -157,6 +157,7 @@ def test_run(tmp_path):
             illum = 0.0
             ty = "dark"
 
+        nlstr = "quadratic 1.4" if k != 2 else "quartic -1.4 0 0"
         sim_cfg = (
             "FORMAT: 1001\n"
             "NREADS: 20\n"
@@ -172,7 +173,7 @@ def test_run(tmp_path):
             "WAVEMODE: ir\n"
             "BFE: true\n"
             "L_IPC: true 0.01\n"
-            "NL: quadratic 1.4\n"
+            f"NL: {nlstr}\n"
             f"OUTPUT: {temp_dir}/{ty}_{k+1:03d}.fits\n"
         )
 
@@ -308,3 +309,102 @@ def test_run(tmp_path):
     diff = np.amax(np.abs(np.mean(data, axis=0) - expected_outputs) / tol)
     print(diff)
     assert diff < 1.0
+
+    # now with IPCSUB on
+    with open(temp_dir + "/analyze_cfg.txt", "w") as f:
+        f.write(analyze_cfg)
+        f.write("IPCSUB: True\n")
+    run_ir_all(temp_dir + "/analyze_cfg.txt")
+    data = np.loadtxt(temp_dir + "/analysis_summary.txt")
+    print(">>", np.mean(data, axis=0))
+
+    expected_outputs[11:13] = np.array([1.22711440e02, 1.16214368e02])
+    diff = np.amax(np.abs(np.mean(data, axis=0) - expected_outputs) / tol)
+    print(diff)
+    assert diff < 1.0
+
+    # hot pixel test. first choose the hot pixels:
+    nh = 400
+    rate = 10.0 ** (1.5 + np.cos(np.linspace(0, 1000, nh)))
+    x = np.zeros(nh, dtype=np.int32)
+    y = np.zeros(nh, dtype=np.int32)
+    # this part has alpha_adj = 0.01, alpha_diag = 0.001
+    cube = np.outer(
+        np.linspace(0, 19, 20), np.array([0.001, 0.01, 0.001, 0.01, 0.956, 0.01, 0.001, 0.01, 0.001])
+    ).reshape((20, 3, 3))
+    for j in range(nh):
+        x[j] = 169 * j % 512
+        y[j] = 257 * j % 512
+        if x[j] <= 4 or x[j] >= 507 or y[j] <= 4 or y[j] >= 507:
+            rate[j] = 0.0
+    # here we add to the input files
+    for k in range(8):
+        ty = "light" if k < 4 else "dark"
+        fn = f"{temp_dir}/{ty}_{k+1:03d}.fits"
+        with fits.open(fn, mode="update") as fk:
+            for j in range(nh):
+                if rate[j] > 1e-2:
+                    r = fk[0].data[:, y[j] - 1 : y[j] + 2, x[j] - 1 : x[j] + 2]
+                    r[...] = np.clip(r + cube * rate[j], 0, 65535)
+    # and run the analysis
+    with open(temp_dir + "/analyze_cfg.txt", "w") as f:
+        f.write(analyze_cfg)
+        f.write("HOTPIX: 400 2400 0.1 0.08\n")
+    run_ir_all(temp_dir + "/analyze_cfg.txt")
+
+    # now see what we got
+    hot = np.loadtxt(f"{temp_dir}/analysis_hot.txt")
+    (nh2, ncol) = np.shape(hot)
+    assert 0.2 < nh2 / nh < 0.4
+    assert ncol == 18
+    nrec = 0
+    for j in range(nh):
+        nrec += np.count_nonzero(np.logical_and(x[j] == hot[:, 0], y[j] == hot[:, 1]))
+    assert 9 * nh2 // 10 <= nrec <= nh2
+
+    # linear fits
+    _x = np.ones((nh2, 2))
+    _x[:, 1] = hot[:, -5] + 4 * (hot[:, -4] + hot[:, -1])
+    _y = hot[:, -4]
+    c, m = np.linalg.lstsq(_x, _y)[0]
+    assert -1 < c < 1
+    assert 0.009 < m < 0.011
+    _y = hot[:, -1]
+    c, m = np.linalg.lstsq(_x, _y)[0]
+    assert -1 < c < 1
+    assert 0.0005 < m < 0.0015
+
+    # and with SLIDEMED and TIMEREF: 1
+    with open(temp_dir + "/analyze_cfg.txt", "w") as f:
+        f.write(analyze_cfg)
+        f.write("IPCSUB: True\n")
+        f.write("HOTPIX: 400 2400 0.1 0.08\n")
+        f.write("HOTPIX SLIDEMED\n")
+        f.write("NARROWFIG\n")
+        f.write("TIMEREF: 1\n")
+    run_ir_all(temp_dir + "/analyze_cfg.txt")
+    hot = np.loadtxt(f"{temp_dir}/analysis_hot.txt")
+    (nh2, ncol) = np.shape(hot)
+    assert 0.2 < nh2 / nh < 0.4
+    assert ncol == 18
+    nrec = 0
+    for j in range(nh):
+        nrec += np.count_nonzero(np.logical_and(x[j] == hot[:, 0], y[j] == hot[:, 1]))
+    assert 9 * nh2 // 10 <= nrec <= nh2
+
+    # see what SLIDEMED did
+    diff = np.amax(np.abs(np.mean(data, axis=0) - expected_outputs) / tol)
+    print(diff)
+    assert diff < 1.0
+
+    # linear fits
+    _x = np.ones((nh2, 2))
+    _x[:, 1] = hot[:, -5] + 4 * (hot[:, -4] + hot[:, -1])
+    _y = hot[:, -4]
+    c, m = np.linalg.lstsq(_x, _y)[0]
+    assert -1 < c < 1
+    assert 0.009 < m < 0.011
+    _y = hot[:, -1]
+    c, m = np.linalg.lstsq(_x, _y)[0]
+    assert -1 < c < 1
+    assert 0.0005 < m < 0.0015
