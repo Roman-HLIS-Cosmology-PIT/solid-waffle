@@ -114,7 +114,7 @@ def calculate_ipc(data_cube_Q, ipc_list, npad=2):
     elif len(ipc_list) == 2:
         ipc_kern = ipc_kernel_HV(ipc_list[0], ipc_list[1])
     else:
-        raise Exception("Incorrect format of IPC alpha entered")
+        raise ValueError("Incorrect format of IPC alpha entered")
 
     # The time samples are given by the first dim of the cube
     for tdx in range(data_cube_Q.shape[0]):

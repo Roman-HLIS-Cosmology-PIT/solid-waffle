@@ -1382,7 +1382,7 @@ class Config:
 
         # Print information in the file header
         thisOut += f"# This summary created at {time.asctime(time.localtime(time.time())):s}\n"
-        thisOut += f"# Uses pyirc v{pyirc.get_version():d}\n"
+        thisOut += f"# Uses pyirc v{pyirc.get_version()}\n"
         thisOut += "# Detector: " + self.mydet + "\n"
         thisOut += "#\n# Files used:\n"
         thisOut += "# Light:\n"

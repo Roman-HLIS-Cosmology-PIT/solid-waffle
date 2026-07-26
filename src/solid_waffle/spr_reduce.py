@@ -17,8 +17,6 @@ from astropy.io import fits
 
 from . import pyirc
 
-thisversion = 5
-
 
 def run_spr_reduce(arglist, verbose=False):
     """
@@ -228,7 +226,7 @@ def run_spr_reduce(arglist, verbose=False):
         hdu.header["DATE"] = format(time.asctime(time.localtime(time.time())))
         hdu.header["SCA"] = sca
         hdu.header["ORIGIN"] = "spr_reduce.py"
-        hdu.header["VERSION"] = f"{thisversion:d}"
+        hdu.header["VERSION"] = pyirc.get_version()
         hdu.header["FILETYPE"] = "dark map for IPC masking"
         hdul = fits.HDUList([hdu])
         hdul.writeto(outstem + "_sprdark.fits", overwrite=True)
@@ -332,7 +330,7 @@ def run_spr_reduce(arglist, verbose=False):
     hdu.header["DATE"] = format(time.asctime(time.localtime(time.time())))
     hdu.header["SCA"] = sca
     hdu.header["ORIGIN"] = "spr_reduce.py"
-    hdu.header["VERSION"] = f"{thisversion:d}"
+    hdu.header["VERSION"] = pyirc.get_version()
     hdu.header["FILETYPE"] = "SPR difference map"
     hdul = fits.HDUList([hdu])
     hdul.writeto(outstem + "_sprmean.fits", overwrite=True)
@@ -407,7 +405,7 @@ def run_spr_reduce(arglist, verbose=False):
     hdu.header["DATE"] = format(time.asctime(time.localtime(time.time())))
     hdu.header["SCA"] = sca
     hdu.header["ORIGIN"] = "spr_reduce.py"
-    hdu.header["VERSION"] = f"{thisversion:d}"
+    hdu.header["VERSION"] = pyirc.get_version()
     hdu.header["FILETYPE"] = "IPC data cube"
     hdu.header["DX"] = str(dx)
     hdu.header["DY"] = str(dy)
