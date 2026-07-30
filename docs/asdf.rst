@@ -1,7 +1,7 @@
 ASDF file support in solid-waffle
 #################################
 
-Most Roman data are being distributed in ASDF format. While solid-waffle is capable of reading these directly, it has some scripts that access large numbers of parts of data files, and currently the FITS readers are much faster for this. Therefore, we expect most users will want to convert the data to FITS format (generally format "6").
+Most Roman data are being distributed in ASDF format. While solid-waffle is capable of reading these directly, it has some scripts that access large numbers of parts of data files, and currently the FITS readers are much faster for this. Therefore, we expect most users will want to convert the data to FITS format (the scripts below convert to `format=1` in solid-waffle convention).
 
 To do so, we provide the ``asdf_to_fits`` utility. This can be used as follows:
 
