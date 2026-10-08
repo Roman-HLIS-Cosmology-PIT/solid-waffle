@@ -2314,7 +2314,7 @@ class Config:
         plt.close(F)
 
 
-def run_ir_all(infile):
+def run_ir_all(infile, tstart=1):
     """
     Runs the IR characterization.
 
@@ -2322,6 +2322,8 @@ def run_ir_all(infile):
     ----------
     infile : str
         The input file.
+    tstart : int, optional
+        The starting index from tslices to use in hotpix function.
 
     Returns
     -------
@@ -2340,7 +2342,7 @@ def run_ir_all(infile):
     cf.method_23_plot()
     with open(cf.outstem + "_summary.txt", "w") as f:
         f.write(cf.text_output())
-    s = cf.hotpix_analysis(verbose=True)
+    s = cf.hotpix_analysis(verbose=True, tstart=tstart)
     with open(cf.outstem + "_hot.txt", "w") as f:
         f.write(s)
     cf.hotpix_plots()
