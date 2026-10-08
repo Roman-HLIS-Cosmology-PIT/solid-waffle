@@ -1504,7 +1504,7 @@ class Config:
 
         return thisOut
 
-    def hotpix_analysis(self, verbose=False):
+    def hotpix_analysis(self, tstart=1, verbose=False):
         """
         Hot pixel analysis.
 
@@ -1512,6 +1512,8 @@ class Config:
         ----------
         verbose : bool, optional
             Whether to talk a lot.
+        tstart : int, optional
+            The starting index from tslices to use in hotpix function.
 
         Returns
         -------
@@ -1527,7 +1529,7 @@ class Config:
         if verbose:
             print("Start hot pixels ...")
         self.hotY, self.hotX = pyirc.hotpix(
-            self.darkfiles, self.formatpars, range(1, self.NTMAX), self.hotpix_ADU_range, True
+            self.darkfiles, self.formatpars, range(1, self.NTMAX), self.hotpix_ADU_range, True, tstart=tstart
         )
         if verbose:
             print("Number of pixels selected:", len(self.hotX))  # only printed for de-bugging -> , len(hotY)
