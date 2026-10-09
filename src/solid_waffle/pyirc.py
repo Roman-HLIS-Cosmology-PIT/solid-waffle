@@ -2683,7 +2683,7 @@ def bfe(region_cube, tslices, basicinfo, ctrl_pars_bfe, swi, verbose):
         return BFEK[sBFE - sBFE_out : sBFE + sBFE_out + 1, sBFE - sBFE_out : sBFE + sBFE_out + 1]
 
 
-def hotpix(darkfiles, formatpars, tslices, tstart=1, pars, verbose):
+def hotpix(darkfiles, formatpars, tslices, pars, verbose, tstart=1):
     """
     Selects hot pixels.
 
@@ -2695,14 +2695,13 @@ def hotpix(darkfiles, formatpars, tslices, tstart=1, pars, verbose):
         The format code.
     tslices : list of int
         The time slices to read (the first slice is 1).
-    tstart: int, optional
-        Index of the first time slice to use. Defaults to 1.
     pars : np.array or array-like
         Parameters controlling the hot pixel selection. These should be
         ``[Smin, Smax, stability, f_isolation]`` (see Notes for detailed meaning).
     verbose : bool
         Whether to print lots of information.
-
+    tstart: int, optional
+            Index of the first time slice to use. Defaults to 1.
     Returns
     -------
     row, col : np.array of int
