@@ -1504,7 +1504,7 @@ class Config:
 
         return thisOut
 
-    def hotpix_analysis(self, verbose=False):
+    def hotpix_analysis(self, tstart=1, verbose=False):
         """
         Hot pixel analysis.
 
@@ -1512,6 +1512,8 @@ class Config:
         ----------
         verbose : bool, optional
             Whether to talk a lot.
+        tstart : int, optional
+            The starting index from tslices to use in hotpix function.
 
         Returns
         -------
@@ -1527,12 +1529,17 @@ class Config:
         if verbose:
             print("Start hot pixels ...")
         self.hotY, self.hotX = pyirc.hotpix(
-            self.darkfiles, self.formatpars, range(1, self.NTMAX), self.hotpix_ADU_range, True
+            self.darkfiles,
+            self.formatpars,
+            range(tstart, self.NTMAX),
+            self.hotpix_ADU_range,
+            True,
+            tstart=tstart,
         )
         if verbose:
             print("Number of pixels selected:", len(self.hotX))  # only printed for de-bugging -> , len(hotY)
         dtstep = 5  # <-- right now this is hard coded
-        self.htsteps = range(1, self.NTMAX, dtstep)
+        self.htsteps = range(tstart, self.NTMAX, dtstep)
         if self.hotpix_logtspace:
             self.htsteps = [1]
             for k in range(1, 12):
@@ -2312,7 +2319,7 @@ class Config:
         plt.close(F)
 
 
-def run_ir_all(infile):
+def run_ir_all(infile, tstart=1):
     """
     Runs the IR characterization.
 
@@ -2320,6 +2327,8 @@ def run_ir_all(infile):
     ----------
     infile : str
         The input file.
+    tstart : int, optional
+        The starting index from tslices to use in hotpix function.
 
     Returns
     -------
@@ -2338,7 +2347,7 @@ def run_ir_all(infile):
     cf.method_23_plot()
     with open(cf.outstem + "_summary.txt", "w") as f:
         f.write(cf.text_output())
-    s = cf.hotpix_analysis(verbose=True)
+    s = cf.hotpix_analysis(verbose=True, tstart=tstart)
     with open(cf.outstem + "_hot.txt", "w") as f:
         f.write(s)
     cf.hotpix_plots()
