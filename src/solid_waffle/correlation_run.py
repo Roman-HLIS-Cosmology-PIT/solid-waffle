@@ -1529,12 +1529,17 @@ class Config:
         if verbose:
             print("Start hot pixels ...")
         self.hotY, self.hotX = pyirc.hotpix(
-            self.darkfiles, self.formatpars, range(1, self.NTMAX), self.hotpix_ADU_range, True, tstart=tstart
+            self.darkfiles,
+            self.formatpars,
+            range(tstart, self.NTMAX),
+            self.hotpix_ADU_range,
+            True,
+            tstart=tstart,
         )
         if verbose:
             print("Number of pixels selected:", len(self.hotX))  # only printed for de-bugging -> , len(hotY)
         dtstep = 5  # <-- right now this is hard coded
-        self.htsteps = range(1, self.NTMAX, dtstep)
+        self.htsteps = range(tstart, self.NTMAX, dtstep)
         if self.hotpix_logtspace:
             self.htsteps = [1]
             for k in range(1, 12):

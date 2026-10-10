@@ -2702,6 +2702,7 @@ def hotpix(darkfiles, formatpars, tslices, pars, verbose, tstart=1):
         Whether to print lots of information.
     tstart: int, optional
             Index of the first time slice to use. Defaults to 1.
+
     Returns
     -------
     row, col : np.array of int
@@ -2728,7 +2729,7 @@ def hotpix(darkfiles, formatpars, tslices, pars, verbose, tstart=1):
     N = get_nside(formatpars)
     cube = np.zeros((ndarks, N, N))
     for f in range(ndarks):
-        CDS = load_segment(darkfiles[f], formatpars, [0, N, 0, N], [1, tslices[-1]], False)
+        CDS = load_segment(darkfiles[f], formatpars, [0, N, 0, N], [tstart, tslices[-1]], False)
         cube[f, :, :] = CDS[0, :, :] - CDS[1, :, :]
 
     # Extract information on the pixels
@@ -2761,9 +2762,9 @@ def hotpix(darkfiles, formatpars, tslices, pars, verbose, tstart=1):
 
     if verbose:
         print("Start with", np.sum(this_hot), "pixels")
-    for t in tslices[tstart:]:
+    for t in tslices[1:]:
         for f in range(ndarks):
-            CDS = load_segment(darkfiles[f], formatpars, [0, N, 0, N], [1, t], False)
+            CDS = load_segment(darkfiles[f], formatpars, [0, N, 0, N], [tstart, t], False)
             cube[f, :, :] = CDS[0, :, :] - CDS[1, :, :]
         d_cube = np.max(cube, axis=0) - np.min(cube, axis=0)
         this_hot *= np.where(d_cube <= pars[2] * ave_cube, 1, 0)
