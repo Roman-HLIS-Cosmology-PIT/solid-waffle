@@ -1,5 +1,7 @@
 """Toolbox for interpolating solid-waffle outputs."""
 
+import math
+
 import numpy as np
 from scipy.interpolate import CloughTocher2DInterpolator
 
@@ -114,3 +116,67 @@ def multimedsmooth(im, dx, expand=1, ignore=None, distort=1.0e-6):
     for k in range(n):
         im_out[k] = _medsmooth(im[k], dx, expand=expand, ignore=ignore, distort=distort)
     return im_out
+
+
+def multimedsmooth_expand(data, n=4096, axis=-1, ignore=None):
+    """Expands a possibly-flattened data cube into (4096, 4096).
+
+    Parameters
+    ----------
+    data : np.ndarray
+        Data cube, including one or more axes that need to be shortened.
+    n : int, optional
+        Size of grid onto which to expand; default is 4096 (so expands that direction
+        onto a 4096 x 4096 array).
+    axis : int or (int, int), optional
+        The axis that corresponds to the super-pixel directions. If an int, takes that
+        axis; if a tuple, then has 2 super-pixel axes (y-direction first, then x).
+    ignore : float or list, optional
+        If a float, ignore exactly that value (useful for integers that represent exactly
+        in float, e.g., 0).
+        If a list, ignores values outside that range.
+
+    Returns
+    -------
+    np.ndarray
+        Data cube with the indicated axis/axes expanded. If it is 2 axes (`axis` is of type
+        (int, int)) then expands both; if 1 axis, then also reshapes that axis into two axes
+        (so the dimensionality increases by 1).
+
+    Notes
+    -----
+    The expanded array has the pixel axes in the same place as the original super-pixel axes.
+    If the original super-pixel axis was flattened, then new array has two axes at that location
+    (with y first).
+
+    """
+
+    # convert the '1 axis' picture into 2 axes
+    if isinstance(axis, int):
+        ax_y = axis if axis >= 0 else len(np.shape(data)) + axis
+        sh_old = np.shape(data)
+        nside2 = sh_old[ax_y]
+        ny = nx = math.isqrt(nside2)
+        sh = sh_old[:ax_y] + (ny, nx) + sh_old[ax_y + 1 :]
+        data = data.reshape(sh)
+        ax_x = ax_y + 1
+    else:
+        # if a tuple, just extract the information
+        sh = np.shape(data)
+        if len(axis) != 2:
+            raise ValueError(f"axis must be either int or (int, int); {axis} not allowed.")
+        (ax_y, ax_x) = axis
+        ny = sh[ax_y]
+        nx = sh[ax_x]
+
+    if ny != nx:
+        raise ValueError("Can't operate on non-square array.")
+
+    # Now permute these to the end and flatten the rest.
+    _d = np.moveaxis(data, [ax_y, ax_x], [-2, -1])
+    shd = np.shape(_d)
+    newdata = multimedsmooth(_d.reshape((-1, ny, nx)), 1, expand=n // ny, ignore=ignore).reshape(
+        shd[:-2] + (n, n)
+    )
+
+    return np.moveaxis(newdata, [-2, -1], [ax_y, ax_x])

@@ -1,7 +1,8 @@
 """Test routines for the interpolator."""
 
 import numpy as np
-from solid_waffle.interpolator import multimedsmooth
+import pytest
+from solid_waffle.interpolator import multimedsmooth, multimedsmooth_expand
 
 
 def test_interp():
@@ -109,3 +110,93 @@ def test_interp():
     im2 = multimedsmooth(im, 1, expand=4)
     diff = im2[2] - (im2[0] + 3 * im2[1])
     assert np.all(np.abs(diff) < 1.0e-4)
+
+
+def test_interp_err():
+    """Checks errors are raised."""
+
+    with pytest.raises(ValueError):
+        multimedsmooth(np.zeros((16, 16)), 7)
+
+
+def test_expand():
+    """Tests expansion function."""
+
+    data = np.zeros((3, 32, 32), dtype=np.float32)
+    s = np.linspace(0, 31, 32) * 128 + 63.5
+    x, y = np.meshgrid(s, s)
+    data[0] = np.exp(-(np.hypot(x - 500, y - 1500) ** 2) / 2.0 / 400.0**2) + 1.0e-5
+    data[1] = data[0]
+    data[1, 5:10, 3] = np.nan
+    data[2] = data[0]
+    data[2, 5:10, 3] = 0.0
+
+    bigdata = multimedsmooth_expand(data, axis=(-2, -1))
+    assert bigdata.dtype == np.float32
+
+    s = np.linspace(0, 4095, 4096)
+    x, y = np.meshgrid(s, s)
+    target = np.exp(-(np.hypot(x - 500, y - 1500) ** 2) / 2.0 / 400.0**2).astype(np.float32)
+    target += 1.0e-5
+    del x, y
+    bd2 = bigdata - target[None, ...]
+    assert np.all(np.abs(bd2[:2]) < 0.01)
+    assert -1.5e-4 < bd2[0, 1170, 440] < 1.5e-4
+    assert -0.004 < bd2[1, 1170, 440] < -0.003
+    assert -0.8 < bd2[2, 1170, 440] < -0.7
+    assert np.all(bd2[2, 1230:1250, 256:276] > 0.08)
+
+    # test ignore
+    b3 = multimedsmooth_expand(data, axis=(-2, -1), ignore=0.0) - target[None, ...]
+    assert -0.004 < b3[2, 1170, 440] < -0.003
+    del b3
+
+    # now test the squashed version of this
+    bigdata2 = multimedsmooth_expand(data.reshape((3, -1)), axis=-1)
+    assert np.allclose(bigdata, bigdata2)
+    del bigdata2
+
+    # the permuted versions
+    bigdata2 = multimedsmooth_expand(data.reshape((3, -1)).T, axis=0)
+    assert np.shape(bigdata2) == (4096, 4096, 3)
+    assert np.allclose(bigdata, np.transpose(bigdata2, axes=(2, 0, 1)))
+    del bigdata2
+
+    bigdata2 = multimedsmooth_expand(data.reshape((3, -1, 1)), axis=1)
+    assert np.shape(bigdata2) == (3, 4096, 4096, 1)
+    assert np.allclose(bigdata, bigdata2[..., 0])
+    del bigdata2
+
+    _d = np.zeros((2, 3, 32, 32, 2), np.float32)
+    _d[1, ..., 0] = data
+    _d[1, ..., 1] = 2 * data
+    bigdata2 = multimedsmooth_expand(_d, axis=(2, 3))
+    assert np.shape(bigdata2) == (2, 3, 4096, 4096, 2)
+    assert np.allclose(bigdata, bigdata2[1, ..., 0])
+    assert np.allclose(2 * bigdata, bigdata2[1, ..., 1], atol=4.0e-7)
+    assert np.all(np.abs(bigdata2[0]) < 1.0e-7)
+    del bigdata2, _d
+
+    # grid down
+    bigdata2 = multimedsmooth_expand(data.reshape((3, -1, 1)), n=1024, axis=1)
+    assert np.shape(bigdata2) == (3, 1024, 1024, 1)
+    bigdata_sq = np.mean(bigdata.reshape((3, 1024, 4, 1024, 4)), axis=(-3, -1))
+    assert np.allclose(bigdata_sq, bigdata2[..., 0], atol=4.0e-4)
+    del bigdata2, bigdata_sq
+
+    # flattened
+    bigdata2 = multimedsmooth_expand(data[2].ravel())
+    assert np.shape(bigdata2) == (4096, 4096)
+    assert np.allclose(bigdata[2], bigdata2)
+    del bigdata2
+
+    bigdata2 = multimedsmooth_expand(data[2].ravel(), axis=0)
+    assert np.shape(bigdata2) == (4096, 4096)
+    assert np.allclose(bigdata[2], bigdata2)
+    del bigdata2
+
+    # 2D, no extra axes
+    bigdata2 = multimedsmooth_expand(data[2], axis=(0, 1))
+    assert np.shape(bigdata2) == (4096, 4096)
+    assert np.allclose(bigdata[2], bigdata2)
+    del bigdata2
