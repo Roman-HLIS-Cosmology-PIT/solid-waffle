@@ -157,6 +157,8 @@ def multimedsmooth_expand(data, n=4096, axis=-1, ignore=None):
         sh_old = np.shape(data)
         nside2 = sh_old[ax_y]
         ny = nx = math.isqrt(nside2)
+        if ny * nx != nside2:
+            raise ValueError(f"cannot reshape axis of length {nside2} into a square array")
         sh = sh_old[:ax_y] + (ny, nx) + sh_old[ax_y + 1 :]
         data = data.reshape(sh)
         ax_x = ax_y + 1

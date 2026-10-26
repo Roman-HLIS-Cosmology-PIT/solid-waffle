@@ -117,6 +117,17 @@ def test_interp_err():
 
     with pytest.raises(ValueError):
         multimedsmooth(np.zeros((16, 16)), 7)
+    with pytest.raises(ValueError):
+        multimedsmooth_expand(
+            np.zeros(
+                316,
+            ),
+            axis=-1,
+        )
+    with pytest.raises(ValueError):
+        multimedsmooth_expand(np.zeros((16, 32)), 1, axis=(-2, -1))
+    with pytest.raises(ValueError):
+        multimedsmooth_expand(np.zeros((16, 32, 2)), 1, axis=(0, 1, 2))
 
 
 def test_expand():
