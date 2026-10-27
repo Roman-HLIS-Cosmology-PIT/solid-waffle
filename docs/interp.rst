@@ -56,7 +56,37 @@ In that case, you can use solid-waffle's interpolating capability (which current
 
 This uses scipy's ``CloughTocher2DInterpolator`` class (a 2D spline using a Voronoi tessellation constructed from the super-pixels) to interpolate across the super-pixels. It interpolates over masked super-pixels (as identified by either infinite values or the `ignore` keyword). It also puts a ring of points around the SCA at the median level (and a radius equal to twice that of the circumscribing circle) so that the extrapolation at the edge does not product artificial outliers. When interpolating from a square grid, there are two possible Voronoi tessellations; the script averages the two results, so that noise in the super-pixels does not propagate into noise that is correlated upper-left-to-lower-right or upper-right-to-lower-left.
 
+The ``multimedsmooth_expand`` function is more general than just for solid-waffle outputs, and works with any power of 2. For example:
+
+.. code-block:: python
+
+  import numpy as np
+  from solid_waffle.interpolator import multimedsmooth_expand
+
+  # expand 4x4 --> 256x256
+  im = np.array([
+      [4., 5., 6., 7.],
+      [8., 9., 10., np.nan],
+      [11., 12., 13., 14.],
+      [15., 16., 17., 18.]
+  ])
+  expanded_im = multimedsmooth_expand(im, n=128, axis=(0, 1))
+
+  # this does the same thing, since the length 16 axis unpacks to 4x4
+  expanded_im = multimedsmooth_expand(im.ravel(), n=128, axis=0)
+
+  # you can also make a cube and expand 3x4x4 --> 3x256x256
+  cube = np.stack((0.*im, im, 2*im))
+  expanded_cube = multimedsmooth_expand(cube, n=128, axis=(1, 2))
+
+  # you can also choose which axes to expand, e.g., 4x4x3 --> 256x256x3
+  cube2 = np.transpose(cube, axes=(1, 2, 0))
+  expanded_cube2 = multimedsmooth_expand(cube2, n=128, axis=(0, 1))
+
 Lower-level control is possible with the ``multimedsmooth`` function.
+
+Examples
+--------
 
 The two examples can be contrasted in the following gain map for WFI08, in the region ``[1500:2300, 3688:4088]``, where super-pixels (31, 14), (30, 15), and (31, 15) were masked:
 
