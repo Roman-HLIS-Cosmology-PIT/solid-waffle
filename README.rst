@@ -52,6 +52,8 @@ Some available help on:
 
 * `Converting ASDF files <docs/asdf.rst>`_.
 
+* `Interpolating solid-waffle outputs <docs/interp.rst>`_.
+
 **Note**: If you want the old (non-module) interface, you can use the scripts in ``legacy_scripts/``. But we anticipate that most new code won't use that.
 
 Files Description
@@ -160,4 +162,4 @@ For more detailed background on the concepts and methods used in this project, p
 * Speckle field analysis projects:
 
   * Hirata, C. & Merchant, C. (2022). *Pixel Centroid Characterization with Laser Speckle and Application to the Nancy Grace Roman Space Telescope Detector Arrays*. Publications of the Astronomical Society of the Pacific, Volume 134, Issue 1041, id.115001 `Link to abstract <https://ui.adsabs.harvard.edu/abs/2022PASP..134k5001H/abstract>`_
-  * Macbeth, E., Laliotis, K. et al. (2025), in prep.
+  * Macbeth, E., Laliotis, K. et al. (2026), *Charge Diffusion and Modulation Transfer Function in a Nancy Grace Roman Space Telescope Detector* Publications of the Astronomical Society of the Pacific, Volume 138, Issue 8, id.085002 `Link to abstract <https://ui.adsabs.harvard.edu/abs/2026PASP..138h5002M/abstract>`_
