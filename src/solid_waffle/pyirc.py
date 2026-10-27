@@ -2701,7 +2701,7 @@ def hotpix(darkfiles, formatpars, tslices, pars, verbose, tstart=1):
     verbose : bool
         Whether to print lots of information.
     tstart: int, optional
-            Index of the first time slice to use. Defaults to 1.
+        Index of the first time slice to use. Defaults to 1.
 
     Returns
     -------
@@ -2762,7 +2762,7 @@ def hotpix(darkfiles, formatpars, tslices, pars, verbose, tstart=1):
 
     if verbose:
         print("Start with", np.sum(this_hot), "pixels")
-    for t in tslices[1:]:
+    for t in tslices[tstart:]:
         for f in range(ndarks):
             CDS = load_segment(darkfiles[f], formatpars, [0, N, 0, N], [tstart, t], False)
             cube[f, :, :] = CDS[0, :, :] - CDS[1, :, :]
@@ -2774,7 +2774,7 @@ def hotpix(darkfiles, formatpars, tslices, pars, verbose, tstart=1):
     return np.where(this_hot > 0)
 
 
-def hotpix_ipc(y, x, darkfiles, formatpars, tslices, pars, verbose):
+def hotpix_ipc(y, x, darkfiles, formatpars, tslices, pars, verbose, tstart=1):
     """
     Return IPC data from a list of hot pixels.
 
@@ -2794,6 +2794,8 @@ def hotpix_ipc(y, x, darkfiles, formatpars, tslices, pars, verbose):
         the non-linearity should be referenced to a median stack of initial image.
     verbose : bool
         Whether to talk a lot.
+    tstart: int, optional
+        Index of the first time slice to use. Defaults to 1.
 
     Returns
     -------
@@ -2811,7 +2813,7 @@ def hotpix_ipc(y, x, darkfiles, formatpars, tslices, pars, verbose):
     N = get_nside(formatpars)
     cube = np.zeros((ndarks, N, N))
 
-    nt = len(tslices)
+    nt = len(tslices[tstart:])
     npix = len(x)
     data = np.zeros((npix, nt, 10))
 
@@ -2853,7 +2855,7 @@ def hotpix_ipc(y, x, darkfiles, formatpars, tslices, pars, verbose):
     # now make data cube
     for jt in range(nt):
         for f in range(ndarks):
-            CDS = load_segment(darkfiles[f], formatpars, [0, N, 0, N], [1, tslices[jt]], False)
+            CDS = load_segment(darkfiles[f], formatpars, [0, N, 0, N], [tstart, tslices[jt]], False)
             cube[f, :, :] = CDS[0, :, :] - CDS[1, :, :]
             if do_nonlin:
                 # non-linearity correction, if turned on
