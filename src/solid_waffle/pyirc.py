@@ -2813,7 +2813,7 @@ def hotpix_ipc(y, x, darkfiles, formatpars, tslices, pars, verbose, tstart=1):
     N = get_nside(formatpars)
     cube = np.zeros((ndarks, N, N))
 
-    nt = len(tslices[tstart:])
+    nt = len(tslices)
     npix = len(x)
     data = np.zeros((npix, nt, 10))
 
