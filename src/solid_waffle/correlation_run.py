@@ -1551,15 +1551,17 @@ class Config:
         self.hotY, self.hotX = pyirc.hotpix(
             self.darkfiles,
             self.formatpars,
-            range(1, self.NTMAX),
+            range(self.tstart, self.NTMAX),
             self.hotpix_ADU_range,
             True,
             tstart=self.tstart,
         )
+        print("after pyirc.hotpix, tslices len:", len(range(self.tstart, self.NTMAX)))
         if verbose:
             print("Number of pixels selected:", len(self.hotX))  # only printed for de-bugging -> , len(hotY)
         dtstep = 5  # <-- right now this is hard coded
         self.htsteps = range(self.tstart, self.NTMAX, dtstep)
+        print("after def htsteps, tslices len:", len(self.htsteps))
         if self.hotpix_logtspace:
             self.htsteps = [1]
             for k in range(1, 12):
@@ -1576,9 +1578,17 @@ class Config:
         if verbose:
             print(beta_gain)
         hotcube = pyirc.hotpix_ipc(
-            self.hotY, self.hotX, self.darkfiles, self.formatpars, self.htsteps, [beta_gain, False], True
+            self.hotY,
+            self.hotX,
+            self.darkfiles,
+            self.formatpars,
+            self.htsteps,
+            [beta_gain, False],
+            True,
+            tstart=self.tstart,
         )
         nhstep = len(self.htsteps)
+        print("ntstep (should be same as above:)", nhstep)
         if verbose:
             print("number of time steps ->", nhstep)
         fromcorr_alpha = np.zeros(len(self.hotX))
@@ -1597,7 +1607,7 @@ class Config:
                 self.full_info[iy, ix, self.swi.alphaH] / 2.0 + self.full_info[iy, ix, self.swi.alphaV] / 2.0
             )
             thisOut += f"{self.hotX[jpix]:4d} {self.hotY[jpix]:4d} {fromcorr_alpha[jpix]:8.6f}"
-            for t in range(1, nhstep):
+            for t in range(self.tstart, nhstep):
                 R = (np.mean(hotcube[jpix, t, 1:5]) - hotcube[jpix, t, -1]) / (
                     hotcube[jpix, t, 0] - hotcube[jpix, t, -1]
                 )
