@@ -118,7 +118,7 @@ def multimedsmooth(im, dx, expand=1, ignore=None, distort=1.0e-6):
     return im_out
 
 
-def multimedsmooth_expand(data, n=4096, axis=-1, ignore=None):
+def multimedsmooth_expand(data, n=4096, axis=-1, ignore=None, sym=True):
     """Expands a possibly-flattened data cube into (4096, 4096).
 
     Parameters
@@ -135,6 +135,9 @@ def multimedsmooth_expand(data, n=4096, axis=-1, ignore=None):
         If a float, ignore exactly that value (useful for integers that represent exactly
         in float, e.g., 0).
         If a list, ignores values outside that range.
+    sym : bool, optional
+        Average the two Voronoi tesselations that have triangles in the two orientations
+        (a square can be decomposed as Lower-Left + Upper-Right, or as Lower-Right + Upper-Left).
 
     Returns
     -------
@@ -177,8 +180,19 @@ def multimedsmooth_expand(data, n=4096, axis=-1, ignore=None):
     # Now permute these to the end and flatten the rest.
     _d = np.moveaxis(data, [ax_y, ax_x], [-2, -1])
     shd = np.shape(_d)
+
     newdata = multimedsmooth(_d.reshape((-1, ny, nx)), 1, expand=n // ny, ignore=ignore).reshape(
         shd[:-2] + (n, n)
     )
+    a1 = np.moveaxis(newdata, [-2, -1], [ax_y, ax_x])
 
-    return np.moveaxis(newdata, [-2, -1], [ax_y, ax_x])
+    # not symmetrized version
+    if not sym:
+        return a1
+
+    # need to symmetrize
+    newdata = multimedsmooth(_d.reshape((-1, ny, nx))[..., ::-1], 1, expand=n // ny, ignore=ignore).reshape(
+        shd[:-2] + (n, n)
+    )[..., ::-1]
+    a2 = np.moveaxis(newdata, [-2, -1], [ax_y, ax_x])
+    return (a1 + a2) / 2.0
