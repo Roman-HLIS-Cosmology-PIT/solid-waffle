@@ -24,7 +24,7 @@ import time
 
 import matplotlib
 import numpy as np
-from astropy.table import Table
+from astropy.io import fits
 
 from . import ftsolve, pyirc
 
@@ -1526,7 +1526,7 @@ class Config:
 
         return thisOut
 
-    def hotpix_analysis(self, tstart=1, verbose=False):
+    def hotpix_analysis(self, verbose=False):
         """
         Hot pixel analysis.
 
@@ -1534,8 +1534,6 @@ class Config:
         ----------
         verbose : bool, optional
             Whether to talk a lot.
-        tstart : int, optional
-            The starting index from tslices to use in hotpix function.
 
         Returns
         -------
@@ -1553,15 +1551,15 @@ class Config:
         self.hotY, self.hotX = pyirc.hotpix(
             self.darkfiles,
             self.formatpars,
-            range(tstart, self.NTMAX),
+            range(1, self.NTMAX),
             self.hotpix_ADU_range,
             True,
-            tstart=tstart,
+            tstart=self.tstart,
         )
         if verbose:
             print("Number of pixels selected:", len(self.hotX))  # only printed for de-bugging -> , len(hotY)
         dtstep = 5  # <-- right now this is hard coded
-        self.htsteps = range(tstart, self.NTMAX, dtstep)
+        self.htsteps = range(self.tstart, self.NTMAX, dtstep)
         if self.hotpix_logtspace:
             self.htsteps = [1]
             for k in range(1, 12):
@@ -1814,28 +1812,40 @@ class Config:
         """
         if not self.vtpe:
             return ""
+        # get x and y coordinates of hot pixels
         self.hotY, self.hotX = pyirc.hotpix(
             self.darkfiles,
             self.formatpars,
-            range(self.tstart, self.NTMAX),
+            range(1, self.NTMAX),
             self.hotpix_ADU_range,
             True,
             tstart=self.tstart,
         )
+        # compute beta gain and get cube
         beta_gain = self.full_info[:, :, self.swi.beta] * self.full_info[:, :, self.swi.g]
         hotcube = pyirc.hotpix_ipc(
             self.hotY, self.hotX, self.darkfiles, self.formatpars, self.htsteps, [beta_gain, False], True
         )
+        # get vtpe info
         pix_signal = hotcube[:, :, 0]
         t_slices = self.htsteps
         signal_above = hotcube[:, :, 2]
         signal_below = hotcube[:, :, 4]
         vtpe = signal_above - signal_below
-        t = Table(
-            [[self.hotX], [self.hotY], [t_slices], [pix_signal], [vtpe]],
-            names=("hotpix_x", "hotpix_y", "t_slice", "signal", "vtpe"),
+        # format and package as fits
+        phdu = fits.PrimaryHDU(data=t_slices)
+        phdr = phdu.header
+        phdr["N_HOTPIX"] = (len(self.hotX), "number of hot pixels")
+        phdr["N_TSLICES"] = (len(t_slices), "number of time slices used")
+        thdu = fits.BinaryTableHDU.from_columns(
+            [
+                fits.Column(name="hotpix_x", format="K", array=self.hotX),
+                fits.Column(name="hotpix_y", format="K", array=self.hotY),
+                fits.Column(name="signal", format="1QD", array=pix_signal),
+                fits.Column(name="vtpe", format="1QD", array=vtpe),
+            ]
         )
-        t.write(self.outstem + "_vtpe.fits", overwrite=True)
+        fits.HDUList([phdu, thdu]).writeto(self.outstem + "_vtpe.fits", overwrite=True)
         return self.outstem + "_vtpe.fits"
 
     def compute_vis_quantities(self, ir_output=None, verbose=False):
