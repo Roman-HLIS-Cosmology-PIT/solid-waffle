@@ -64,5 +64,5 @@ The two examples can be contrasted in the following gain map for WFI08, in the r
 
 - *Right*: Smooth interpolation (``expand_data_v2`` in the above case): note the 3 masked super-pixels are interpolated over.
 
-.. image:: images/WFI08_y1500-2300_x3688-4088.jpg
+.. image:: images/WFI08_y1500-2300_x3688-4088.jpeg
     :alt: Comparison of grid image (with square cells) and smoothly interpolated image.
