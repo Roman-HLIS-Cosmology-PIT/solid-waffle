@@ -1,7 +1,6 @@
 import asdf
 import numpy as np
 from astropy.io import fits
-from astropy.table import Table
 from solid_waffle.correlation_run import run_ir_all
 from solid_waffle.flat_simulator import simulate_flat
 from solid_waffle.pyirc import get_num_slices, load_segment
@@ -359,8 +358,8 @@ def test_run(tmp_path):
 
     # vtpe
     n_vtpe = 400
-    vtpe_table = Table.read(temp_dir + "/analysis_vtpe.fits")
-    n_vtpe2 = len(vtpe_table)
+    vtpe_hdul = fits.open(temp_dir + "/analysis_vtpe.fits")
+    n_vtpe2 = len(vtpe_hdul[1].data["vtpe"])
     assert 0.2 < n_vtpe2 / n_vtpe < 0.4
 
     # LOGTSPACE
