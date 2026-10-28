@@ -10,6 +10,8 @@ def test_nopad():
 
     arr = np.linspace(5, 10, 25).reshape((5, 5))
     assert np.allclose(arr, pad_to_N(arr, 5))
+    arr = np.linspace(5, 10, 25).reshape((5, 5))
+    assert np.allclose(arr, pad_to_N(arr, 3))
 
 
 def test_p2kernel():
