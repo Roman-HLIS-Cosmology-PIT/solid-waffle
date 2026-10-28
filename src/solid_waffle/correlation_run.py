@@ -24,6 +24,7 @@ import time
 
 import matplotlib
 import numpy as np
+from astropy.io import fits
 
 from . import ftsolve, pyirc
 
@@ -74,6 +75,8 @@ class Config:
         The number of bins to break the detector array into on the x and y axes.
     tslices : list of int
         Time slices to use for BFE correlations. Length 4, ascending.
+    tstart: int
+        Starting index from tslices for hot pixel analysis. Default is 1.
     tslicesM2a, tslicesM2b, tslicesM3 : list of int
         Time slices to use for alternative BFE tests. Length 4, ascending.
     fullref : bool
@@ -177,6 +180,8 @@ class Config:
         The visible characterization data, shape = (`ny`, `nx`, 56)
     vis_col : dict
         Column mapping for the visible characterization.
+    vtpe: bool
+        Whether to run a vertical trailing pixel effect (vtpe) analysis.
 
     Methods
     -------
@@ -202,6 +207,8 @@ class Config:
       Computations for the visible light characterization.
     vis_plots
       Make plots for the visible light characterization.
+    get_vtpe_summary
+        Get vtpe information, packed as a fits table.
 
     """
 
@@ -220,6 +227,7 @@ class Config:
         self.formatpars = 1
         self.nx = self.ny = 32
         self.tslices = [3, 11, 13, 21]
+        self.tstart = 1
         self.tslicesM2a = []
         self.tslicesM2b = []
         self.tslicesM3 = []
@@ -231,6 +239,7 @@ class Config:
         self.ref_for_hotpix_is_autocorr = False
         self.hotpix_logtspace = False
         self.hotpix_slidemed = False
+        self.vtpe = False
 
         self.swi = pyirc.IndexDictionary(0)  # initialize column table; will add more
 
@@ -463,7 +472,18 @@ class Config:
             m = re.search(r"^HOTPIX\s+SLIDEMED", line)
             if m:
                 self.hotpix_slidemed = True
-
+            # different starting time slice for hot pixel analysis?
+            m = re.search(r"^HOTPIX_TSTART:\s+(\S+)", line)
+            if m:
+                self.tstart = int(m.group(1))
+                if not self.hotpix:
+                    raise ValueError("HOTPIX_TSTART specified but HOTPIX not enabled.")
+            # get vtpe summary?
+            m = re.search(r"^VTPE", line)
+            if m:
+                self.vtpe = True
+                if not self.hotpix:
+                    raise ValueError("VTPE specified but HOTPIX not enabled.")
             # Mask regions by hand
             m = re.search(r"^MASK:\s*(\d+)\s+(\d+)", line)
             if m:
@@ -1529,12 +1549,19 @@ class Config:
         if verbose:
             print("Start hot pixels ...")
         self.hotY, self.hotX = pyirc.hotpix(
-            self.darkfiles, self.formatpars, range(1, self.NTMAX), self.hotpix_ADU_range, True
+            self.darkfiles,
+            self.formatpars,
+            range(self.tstart, self.NTMAX),
+            self.hotpix_ADU_range,
+            True,
+            tstart=self.tstart,
         )
+        print("after pyirc.hotpix, tslices len:", len(range(self.tstart, self.NTMAX)))
         if verbose:
             print("Number of pixels selected:", len(self.hotX))  # only printed for de-bugging -> , len(hotY)
         dtstep = 5  # <-- right now this is hard coded
-        self.htsteps = range(1, self.NTMAX, dtstep)
+        self.htsteps = range(self.tstart, self.NTMAX, dtstep)
+        print("after def htsteps, tslices len:", len(self.htsteps))
         if self.hotpix_logtspace:
             self.htsteps = [1]
             for k in range(1, 12):
@@ -1551,9 +1578,17 @@ class Config:
         if verbose:
             print(beta_gain)
         hotcube = pyirc.hotpix_ipc(
-            self.hotY, self.hotX, self.darkfiles, self.formatpars, self.htsteps, [beta_gain, False], True
+            self.hotY,
+            self.hotX,
+            self.darkfiles,
+            self.formatpars,
+            self.htsteps,
+            [beta_gain, False],
+            True,
+            tstart=self.tstart,
         )
         nhstep = len(self.htsteps)
+        print("ntstep (should be same as above:)", nhstep)
         if verbose:
             print("number of time steps ->", nhstep)
         fromcorr_alpha = np.zeros(len(self.hotX))
@@ -1572,7 +1607,7 @@ class Config:
                 self.full_info[iy, ix, self.swi.alphaH] / 2.0 + self.full_info[iy, ix, self.swi.alphaV] / 2.0
             )
             thisOut += f"{self.hotX[jpix]:4d} {self.hotY[jpix]:4d} {fromcorr_alpha[jpix]:8.6f}"
-            for t in range(1, nhstep):
+            for t in range(self.tstart, nhstep):
                 R = (np.mean(hotcube[jpix, t, 1:5]) - hotcube[jpix, t, -1]) / (
                     hotcube[jpix, t, 0] - hotcube[jpix, t, -1]
                 )
@@ -1778,6 +1813,50 @@ class Config:
         F.set_tight_layout(True)
         F.savefig(self.outstem + "_hotipc.pdf")
         plt.close(F)
+
+    def get_vtpe_summary(self):
+        """
+        Gets the summary of the VTPE (Vertical Trailing Pixel Effect).
+        Returned as a fits file.
+
+        """
+        if not self.vtpe:
+            return ""
+        # get x and y coordinates of hot pixels
+        self.hotY, self.hotX = pyirc.hotpix(
+            self.darkfiles,
+            self.formatpars,
+            range(1, self.NTMAX),
+            self.hotpix_ADU_range,
+            True,
+            tstart=self.tstart,
+        )
+        # compute beta gain and get cube
+        beta_gain = self.full_info[:, :, self.swi.beta] * self.full_info[:, :, self.swi.g]
+        hotcube = pyirc.hotpix_ipc(
+            self.hotY, self.hotX, self.darkfiles, self.formatpars, self.htsteps, [beta_gain, False], True
+        )
+        # get vtpe info
+        pix_signal = hotcube[:, :, 0]
+        t_slices = self.htsteps
+        signal_above = hotcube[:, :, 2]
+        signal_below = hotcube[:, :, 4]
+        vtpe = signal_above - signal_below
+        # format and package as fits
+        phdu = fits.PrimaryHDU(data=t_slices)
+        phdr = phdu.header
+        phdr["N_HOTPIX"] = (len(self.hotX), "number of hot pixels")
+        phdr["N_TSLICES"] = (len(t_slices), "number of time slices used")
+        thdu = fits.BinTableHDU.from_columns(
+            [
+                fits.Column(name="hotpix_x", format="K", array=self.hotX),
+                fits.Column(name="hotpix_y", format="K", array=self.hotY),
+                fits.Column(name="signal", format="1QD", array=pix_signal),
+                fits.Column(name="vtpe", format="1QD", array=vtpe),
+            ]
+        )
+        fits.HDUList([phdu, thdu]).writeto(self.outstem + "_vtpe.fits", overwrite=True)
+        return self.outstem + "_vtpe.fits"
 
     def compute_vis_quantities(self, ir_output=None, verbose=False):
         """
@@ -2322,6 +2401,8 @@ def run_ir_all(infile):
     ----------
     infile : str
         The input file.
+    tstart : int, optional
+        The starting index from tslices to use in hotpix function.
 
     Returns
     -------
@@ -2344,6 +2425,10 @@ def run_ir_all(infile):
     with open(cf.outstem + "_hot.txt", "w") as f:
         f.write(s)
     cf.hotpix_plots()
+    if cf.vtpe:
+        s = cf.get_vtpe_summary()
+        if s != "":
+            print("VTPE summary written to", s)
 
 
 def run_vis_all(infile, run_ir_first=True):

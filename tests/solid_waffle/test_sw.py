@@ -328,6 +328,7 @@ def test_run(tmp_path):
         f.write("HOTPIX SLIDEMED\n")
         f.write("NARROWFIG\n")
         f.write("TIMEREF: 1\n")
+        f.write("VTPE\n")
     run_ir_all(temp_dir + "/analyze_cfg.txt")
     hot = np.loadtxt(f"{temp_dir}/analysis_hot.txt")
     (nh2, ncol) = np.shape(hot)
@@ -354,6 +355,12 @@ def test_run(tmp_path):
     c, m = np.linalg.lstsq(_x, _y)[0]
     assert -1 < c < 1
     assert 0.0005 < m < 0.0015
+
+    # vtpe
+    n_vtpe = 400
+    vtpe_hdul = fits.open(temp_dir + "/analysis_vtpe.fits")
+    n_vtpe2 = len(vtpe_hdul[1].data["vtpe"])
+    assert 0.2 < n_vtpe2 / n_vtpe < 0.4
 
     # LOGTSPACE
     with open(temp_dir + "/analyze_cfg.txt", "w") as f:
