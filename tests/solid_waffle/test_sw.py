@@ -1,5 +1,6 @@
 import asdf
 import numpy as np
+import pytest
 from astropy.io import fits
 from solid_waffle.correlation_run import run_ir_all
 from solid_waffle.flat_simulator import simulate_flat
@@ -378,7 +379,7 @@ def test_run(tmp_path):
     assert 12.8 < sl[9] < 13.2
     assert 14.8 < sl[10] < 15.2
 
-    # FULLNL
+    # FULLNL, QUANTILE
     analyze_cfg = (
         "DETECTOR: Test_simulation\n"
         "LIGHT:\n"
@@ -397,6 +398,8 @@ def test_run(tmp_path):
         "TIME:    1 10 12 20\n"
         "NLPOLY: 3 1 20\n"
         "FULLNL: True True True\n"
+        "QUANTILE: 85\n"
+        "EPSILON: 0.02\n"
         f"OUTPUT: {temp_dir}/analysis\n"
     )
     with open(temp_dir + "/analyze_cfg.txt", "w") as f:
@@ -411,3 +414,26 @@ def test_run(tmp_path):
     assert -0.001 < d[-3] < 0.001
     assert -2.05 < d[-2] * 1.0e6 < -1.95
     assert -0.1 < d[-1] * 1.0e10 < 0.1
+
+    # this should fail
+    analyze_cfg = (
+        "DETECTOR: Test_simulation\n"
+        "LIGHT:\n"
+        f"    {temp_dir}/light_001.fits\n"
+        f"    {temp_dir}/light_002.fits\n"
+        "DARK:\n"
+        f"    {temp_dir}/dark_005.fits\n"
+        f"    {temp_dir}/dark_006.fits\n"
+        f"    {temp_dir}/dark_007.fits\n"
+        f"    {temp_dir}/dark_008.fits\n"
+        "FORMAT: 1001\n"
+        "CHAR: Advanced 1 3 3 bfe\n"
+        "NBIN: 4 4\n"
+        "TIME:    1 10 12 20\n"
+        "NLPOLY: 3 1 20\n"
+        f"OUTPUT: {temp_dir}/analysis\n"
+    )
+    with open(temp_dir + "/analyze_cfg.txt", "w") as f:
+        f.write(analyze_cfg)
+    with pytest.raises(ValueError):
+        run_ir_all(temp_dir + "/analyze_cfg.txt")
