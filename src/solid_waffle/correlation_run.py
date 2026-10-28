@@ -1847,7 +1847,7 @@ class Config:
         phdr = phdu.header
         phdr["N_HOTPIX"] = (len(self.hotX), "number of hot pixels")
         phdr["N_TSLICES"] = (len(t_slices), "number of time slices used")
-        thdu = fits.BinaryTableHDU.from_columns(
+        thdu = fits.BinTableHDU.from_columns(
             [
                 fits.Column(name="hotpix_x", format="K", array=self.hotX),
                 fits.Column(name="hotpix_y", format="K", array=self.hotY),
