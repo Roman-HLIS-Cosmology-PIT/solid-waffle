@@ -55,3 +55,5 @@ def test_return_gain_alphacorr():
 
     assert len(gain_alphacorr(1.0, 100.0, 100.0, 100.0)) == 0
     assert len(gain_alphabetacorr(1.0e-6, 0.0, 0.0, 1.0e3, 0.0, [1, 2, 3, 4])) == 0
+    assert len(gain_alphabetacorr(1.0, 100.0, 100.0, 300.0, 0.0, [1, 2, 3, 4])) == 0
+    assert len(gain_alphabetacorr(1.0, 0.0, 0.0, 300.0, -0.5, [1, 2, 3, 4])) == 0
