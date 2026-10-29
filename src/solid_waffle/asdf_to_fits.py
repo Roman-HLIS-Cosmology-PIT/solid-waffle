@@ -152,7 +152,7 @@ def main(input_dir=None, output_dir=None, fmatch="*.asdf", format="wfi_tvac"):
                                         USEFIELDS_L1[metakey][d][1] + f" {j+1:04d}",
                                     )
                             else:
-                                if not isinstance(val, (int, float, bool, str)):
+                                if not isinstance(val, int | float | bool | str):
                                     val = str(val)
                                 h.header[USEFIELDS_L1[metakey][d][0]] = (val, USEFIELDS_L1[metakey][d][1])
 
