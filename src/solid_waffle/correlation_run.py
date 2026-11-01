@@ -1607,7 +1607,7 @@ class Config:
                 self.full_info[iy, ix, self.swi.alphaH] / 2.0 + self.full_info[iy, ix, self.swi.alphaV] / 2.0
             )
             thisOut += f"{self.hotX[jpix]:4d} {self.hotY[jpix]:4d} {fromcorr_alpha[jpix]:8.6f}"
-            for t in range(self.tstart, nhstep):
+            for t in range(1, nhstep):
                 R = (np.mean(hotcube[jpix, t, 1:5]) - hotcube[jpix, t, -1]) / (
                     hotcube[jpix, t, 0] - hotcube[jpix, t, -1]
                 )
