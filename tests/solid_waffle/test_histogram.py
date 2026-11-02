@@ -38,7 +38,9 @@ def _run(tmp_path, fileformat, first_file, nfile):
     """Runs the histogram script and returns the output table."""
 
     outfile = str(tmp_path / "hist.txt")
-    histograms_main([None, "-f", str(fileformat), "-i", str(tmp_path / first_file), "-o", outfile, "-n", str(nfile)])
+    histograms_main(
+        [None, "-f", str(fileformat), "-i", str(tmp_path / first_file), "-o", outfile, "-n", str(nfile)]
+    )
     return np.loadtxt(outfile).astype(np.int64)
 
 
@@ -115,7 +117,9 @@ def test_bad_file_name(tmp_path):
     """Checks that a name not ending in _NNN.fits raises an error."""
 
     with pytest.raises(ValueError, match="Match failed"):
-        histograms_main([None, "-f", "1", "-i", str(tmp_path / "oops.doesnt.exist"), "-o", "x.txt", "-n", "1"])
+        histograms_main(
+            [None, "-f", "1", "-i", str(tmp_path / "oops.doesnt.exist"), "-o", "x.txt", "-n", "1"]
+        )
 
 
 @pytest.mark.parametrize("first_file", ["20260220T_001.fits", "myfile_001.fits"])
