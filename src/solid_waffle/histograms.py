@@ -88,18 +88,19 @@ def main(argv):
 
     nside = pyirc.get_nside(fileformat)
     ntslice = pyirc.get_num_slices(fileformat, filelist[0])
+    chw = nside // 32  # channel width in columns (128 for 4096, 64 for 2048)
 
     # now build the histograms
     for ifile in range(nfile):
         print("file", ifile)
         for t in range(1, ntslice):
             frame = (
-                65535 - pyirc.load_segment(filelist[k], fileformat, [0, nside, 0, nside], [t], False)[0, :, :]
+                65535 - pyirc.load_segment(filelist[ifile], fileformat, [0, nside, 0, nside], [t], False)[0, :, :]
             )
             for ch in range(32):
-                xmin = max(ch * 128, 4)
-                xmax = min((ch + 1) * 128, 4092)
-                h, _ = numpy.histogram(frame[4:4092, xmin:xmax], bins=65536, range=(-0.5, 65535.5))
+                xmin = max(ch * chw, 4)
+                xmax = min((ch + 1) * chw, nside - 4)
+                h, _ = numpy.histogram(frame[4 : nside - 4, xmin:xmax], bins=65536, range=(-0.5, 65535.5))
                 hist[:, ch] += h
 
     numpy.savetxt(outfile, hist, fmt="%7d")
