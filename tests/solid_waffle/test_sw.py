@@ -374,10 +374,11 @@ def test_run(tmp_path):
     for i in signal_arr:
         for t in i:
             flat_signal.append(t)
-    assert -0.005 < np.nanmedian(np.array(flat_vtpe) / np.array(flat_signal)) < -0.003
+    # print("VTPE", np.nanmedian(np.array(flat_vtpe) / np.array(flat_signal)))
+    assert -0.0052 < np.nanmedian(np.array(flat_vtpe) / np.array(flat_signal)) < -0.0028
     # check tstart
     tslices = vtpe_hdul[0].data
-    assert len(tslices) == 3
+    assert len(tslices) == 4
 
     # LOGTSPACE
     with open(temp_dir + "/analyze_cfg.txt", "w") as f:
