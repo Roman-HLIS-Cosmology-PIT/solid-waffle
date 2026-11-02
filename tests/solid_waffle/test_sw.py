@@ -374,7 +374,7 @@ def test_run(tmp_path):
     for i in signal_arr:
         for t in i:
             flat_signal.append(t)
-    assert -0.005 < np.mean(flat_vtpe) < -0.003
+    assert -0.005 < np.nanmedian(np.array(flat_vtpe) / np.array(flat_signal)) < -0.003
     # check tstart
     tslices = vtpe_hdul[0].data
     assert len(tslices) == 3
