@@ -276,7 +276,7 @@ def test_run(tmp_path):
     y = np.zeros(nh, dtype=np.int32)
     # this part has alpha_adj = 0.01, alpha_diag = 0.001
     cube = np.outer(
-        np.linspace(0, 19, 20), np.array([0.001, 0.01, 0.001, 0.01, 0.956, 0.01, 0.001, 0.01, 0.001])
+        np.linspace(0, 19, 20), np.array([0.001, 0.012, 0.001, 0.01, 0.956, 0.01, 0.001, 0.008, 0.001])
     ).reshape((20, 3, 3))
     for j in range(nh):
         x[j] = 169 * j % 512
@@ -364,12 +364,17 @@ def test_run(tmp_path):
     n_vtpe2 = len(vtpe_hdul[1].data["vtpe"])
     assert 0.2 < n_vtpe2 / n_vtpe < 0.4
     # check values
+    vtpe_arr = np.array(vtpe_hdul[1].data["vtpe"])
+    signal_arr = np.array(vtpe_hdul[1].data["signal"])
     flat_vtpe = []
-    for i in vtpe_hdul[1].data["vtpe"]:
+    flat_signal = []
+    for i in vtpe_arr:
         for t in i:
             flat_vtpe.append(t)
-    flat_vtpe = np.array(flat_vtpe)
-    assert np.all(flat_vtpe < 0)
+    for i in signal_arr:
+        for t in i:
+            flat_signal.append(t)
+    assert -0.005 < np.mean(flat_vtpe) < -0.003
     # check tstart
     tslices = vtpe_hdul[0].data
     assert len(tslices) == 3

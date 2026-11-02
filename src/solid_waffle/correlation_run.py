@@ -1826,7 +1826,7 @@ class Config:
         self.hotY, self.hotX = pyirc.hotpix(
             self.darkfiles,
             self.formatpars,
-            range(1, self.NTMAX),
+            range(self.tstart, self.NTMAX),
             self.hotpix_ADU_range,
             True,
             tstart=self.tstart,
@@ -1834,7 +1834,14 @@ class Config:
         # compute beta gain and get cube
         beta_gain = self.full_info[:, :, self.swi.beta] * self.full_info[:, :, self.swi.g]
         hotcube = pyirc.hotpix_ipc(
-            self.hotY, self.hotX, self.darkfiles, self.formatpars, self.htsteps, [beta_gain, False], True
+            self.hotY,
+            self.hotX,
+            self.darkfiles,
+            self.formatpars,
+            self.htsteps,
+            [beta_gain, False],
+            True,
+            tstart=self.tstart,
         )
         # get vtpe info
         pix_signal = hotcube[:, :, 0]
