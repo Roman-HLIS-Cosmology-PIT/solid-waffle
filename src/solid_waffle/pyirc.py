@@ -1326,7 +1326,7 @@ def gain_alphabetacorr(graw, CH, CV, signal, frac_dslope, times):
     return [g, alphaH, alphaV, beta, I_]
 
 
-def basic(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verbose):
+def basic(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verbose=False):
     """
     Basic characterization of a data cube.
 
@@ -1349,8 +1349,9 @@ def basic(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verbose
         Similar to `lightref`, but for the dark exposures.
     ctrl_pars : class
         Contains the control parameters as attributes (see Notes).
-    verbose : bool
-        Whether to print lots of information.
+    verbose : bool, optional
+        For testing only; doesn't do anything (but is available if for debugging we want to enable a
+        ``verbose=True``, and for legacy code that tries to pass a `verbose` argument).
 
     Returns
     -------
@@ -1400,13 +1401,11 @@ def basic(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verbose
     # Extract basic parameters
     num_files = region_cube.shape[0] - 1
     nt = region_cube.shape[1]
-    dy = region_cube.shape[2]
-    dx = region_cube.shape[3]
+    # dy = region_cube.shape[2]
+    # dx = region_cube.shape[3]
     # npix = dx * dy
     if nt != len(tslices):
         raise RuntimeError("Error in pyirc.basic: incompatible number of time slices")
-    if verbose:
-        print("nfiles = ", num_files, ", ntimes = ", nt, ", dx,dy=", dx, dy)
     treset = 0
     if hasattr(ctrl_pars, "reset_frame"):
         treset = ctrl_pars.reset_frame
@@ -1421,8 +1420,6 @@ def basic(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verbose
     noise_corr = True
     if hasattr(ctrl_pars, "noise_corr"):
         noise_corr = ctrl_pars.noise_corr
-    if verbose:
-        print("corr pars =", epsilon, subtr_corr, noise_corr)
     #
 
     # Reference pixel subtraction?
@@ -1452,15 +1449,6 @@ def basic(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verbose
     #
     if subtr_href:
         for f in range(num_files):
-            if verbose:
-                print(
-                    "lightref.shape=",
-                    lightref.shape,
-                    "subtr ->",
-                    lightref[f, nt + 1],
-                    lightref[f, 2 * nt - 1],
-                    darkref[f, 2 * nt - 1],
-                )
             box1[f, :, :] -= lightref[f, nt + 1]
             box2[f, :, :] -= lightref[f, 2 * nt - 1]
             box2Noise[f, :, :] -= darkref[f, 2 * nt - 1]
@@ -1483,8 +1471,6 @@ def basic(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verbose
             )
             var1 += (iqr1 / gauss_iqr_in_sigmas) ** 2 / 2.0
             var2 += (iqr2 / gauss_iqr_in_sigmas) ** 2 / 2.0
-            if verbose:
-                print("Inner loop,", if1, if2, temp_box.shape)
     var1 /= num_files * (num_files - 1) / 2.0
     var2 /= num_files * (num_files - 1) / 2.0
     if var2 <= var1 and tslices[1] < tslices[-1]:
@@ -1599,10 +1585,6 @@ def basic(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verbose
                         CD -= mean_of_temp_box**2
                     tCD += CD * (1 if icorr == 0 else -1)
 
-                if verbose:
-                    print("pos =", if1, if2, "iteration", icorr, "cmin,cmax =", cmin, cmax)
-                    print("Mask size", np.sum(this_mask), "correlations =", maskCH, maskCV, "data:", CH, CV)
-
                 temp_box = box2Noise[if1, :, :] - box2Noise[if2, :, :]
                 # end nested for loop
     #
@@ -1660,14 +1642,6 @@ def basic(region_cube, dark_cube, tslices, lightref, darkref, ctrl_pars, verbose
         frac_dslope = fac0 / fac1 / ((tslices[-1] - tslices[-2]) / float(tslices[1] - tslices[0]))
     else:
         frac_dslope = 0.0
-    if verbose:
-        print("frac_dslope =", frac_dslope)
-
-    if verbose:
-        print("Group 1 ->", med1, var1)
-        print("Group 2 ->", med2, var2)
-        print("correlations in Group 2:", tCH, tCV)
-        print("factors used: xi =", xi, ", cov_clip_corr =", cov_clip_corr)
 
     # Get alpha-corrected gains
     out = gain_alphacorr(gain_raw, tCH, tCV, med2)
@@ -2049,7 +2023,7 @@ def corrstats(lightfiles, darkfiles, formatpars, box, tslices, sensitivity_sprea
                 # switch to the mask from above
                 region_cube[-1, :, :, :] = region_cube_X[-1, :, :, :]
                 dark_cube[-1, :, :, :] = region_cube_X[-1, :, :, :]
-                B = basic(region_cube, dark_cube, tarray, lightref, darkref, ctrl_pars2, False)
+                B = basic(region_cube, dark_cube, tarray, lightref, darkref, ctrl_pars2)
                 if len(B) == 6:
                     data[ti, tj, :] = np.asarray(B)
                 # print (t1, t2, data[ti,tj,:], len(B))

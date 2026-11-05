@@ -627,7 +627,6 @@ class Config:
                     self.lightref[:, iy, :],
                     self.darkref[:, iy, :],
                     self.basicpar,
-                    False,
                 )
                 if len(info) > 0:
                     self.is_good[iy, ix] = 1
@@ -956,7 +955,6 @@ class Config:
                                 lightref[:, iy, :],
                                 darkref[:, iy, :],
                                 self.basicpar,
-                                False,
                             )
                             self.Method2a_vals[iy, ix, t] = lngraw[t] = np.log(info[1])
                         # Build least squares fit
@@ -1051,7 +1049,6 @@ class Config:
                                 lightref[:, iy, :],
                                 darkref[:, iy, :],
                                 self.basicpar,
-                                False,
                             )
                             self.Method2b_vals[iy, ix, t] = lngraw[t] = np.log(info[1])
                         # Build least squares fit
@@ -1146,7 +1143,6 @@ class Config:
                                 lightref[:, iy, :],
                                 darkref[:, iy, :],
                                 self.basicpar,
-                                False,
                             )
                             self.Method3_vals[iy, ix, t] = CCraw[t] = (
                                 (info[self.swi.tCH] + info[self.swi.tCV])
