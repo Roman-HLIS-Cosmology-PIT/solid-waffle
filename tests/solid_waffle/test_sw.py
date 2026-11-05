@@ -276,7 +276,7 @@ def test_run(tmp_path):
     y = np.zeros(nh, dtype=np.int32)
     # this part has alpha_adj = 0.01, alpha_diag = 0.001
     cube = np.outer(
-        np.linspace(0, 19, 20), np.array([0.001, 0.01, 0.001, 0.01, 0.956, 0.01, 0.001, 0.01, 0.001])
+        np.linspace(0, 19, 20), np.array([0.001, 0.012, 0.001, 0.01, 0.956, 0.01, 0.001, 0.008, 0.001])
     ).reshape((20, 3, 3))
     for j in range(nh):
         x[j] = 169 * j % 512
@@ -328,6 +328,8 @@ def test_run(tmp_path):
         f.write("HOTPIX SLIDEMED\n")
         f.write("NARROWFIG\n")
         f.write("TIMEREF: 1\n")
+        f.write("HOTPIX_TSTART: 2\n")
+        f.write("VTPE\n")
     run_ir_all(temp_dir + "/analyze_cfg.txt")
     hot = np.loadtxt(f"{temp_dir}/analysis_hot.txt")
     (nh2, ncol) = np.shape(hot)
@@ -354,6 +356,29 @@ def test_run(tmp_path):
     c, m = np.linalg.lstsq(_x, _y)[0]
     assert -1 < c < 1
     assert 0.0005 < m < 0.0015
+
+    # vtpe/associated
+    # check length
+    n_vtpe = 400
+    vtpe_hdul = fits.open(temp_dir + "/analysis_vtpe.fits")
+    n_vtpe2 = len(vtpe_hdul[1].data["vtpe"])
+    assert 0.2 < n_vtpe2 / n_vtpe < 0.4
+    # check values
+    vtpe_arr = np.array(vtpe_hdul[1].data["vtpe"])
+    signal_arr = np.array(vtpe_hdul[1].data["signal"])
+    flat_vtpe = []
+    flat_signal = []
+    for i in vtpe_arr:
+        for t in i:
+            flat_vtpe.append(t)
+    for i in signal_arr:
+        for t in i:
+            flat_signal.append(t)
+    # print("VTPE", np.nanmedian(np.array(flat_vtpe) / np.array(flat_signal)))
+    assert -0.0052 < np.nanmedian(np.array(flat_vtpe) / np.array(flat_signal)) < -0.0028
+    # check tstart
+    tslices = vtpe_hdul[0].data
+    assert len(tslices) == 4
 
     # LOGTSPACE
     with open(temp_dir + "/analyze_cfg.txt", "w") as f:

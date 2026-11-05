@@ -2683,7 +2683,7 @@ def bfe(region_cube, tslices, basicinfo, ctrl_pars_bfe, swi, verbose):
         return BFEK[sBFE - sBFE_out : sBFE + sBFE_out + 1, sBFE - sBFE_out : sBFE + sBFE_out + 1]
 
 
-def hotpix(darkfiles, formatpars, tslices, pars, verbose):
+def hotpix(darkfiles, formatpars, tslices, pars, verbose, tstart=1):
     """
     Selects hot pixels.
 
@@ -2700,6 +2700,8 @@ def hotpix(darkfiles, formatpars, tslices, pars, verbose):
         ``[Smin, Smax, stability, f_isolation]`` (see Notes for detailed meaning).
     verbose : bool
         Whether to print lots of information.
+    tstart: int, optional
+        Index of the first time slice to use. Defaults to 1.
 
     Returns
     -------
@@ -2727,7 +2729,7 @@ def hotpix(darkfiles, formatpars, tslices, pars, verbose):
     N = get_nside(formatpars)
     cube = np.zeros((ndarks, N, N))
     for f in range(ndarks):
-        CDS = load_segment(darkfiles[f], formatpars, [0, N, 0, N], [1, tslices[-1]], False)
+        CDS = load_segment(darkfiles[f], formatpars, [0, N, 0, N], [tstart, tslices[-1]], False)
         cube[f, :, :] = CDS[0, :, :] - CDS[1, :, :]
 
     # Extract information on the pixels
@@ -2760,9 +2762,9 @@ def hotpix(darkfiles, formatpars, tslices, pars, verbose):
 
     if verbose:
         print("Start with", np.sum(this_hot), "pixels")
-    for t in tslices[1:]:
+    for t in tslices[tstart:]:
         for f in range(ndarks):
-            CDS = load_segment(darkfiles[f], formatpars, [0, N, 0, N], [1, t], False)
+            CDS = load_segment(darkfiles[f], formatpars, [0, N, 0, N], [tstart, t], False)
             cube[f, :, :] = CDS[0, :, :] - CDS[1, :, :]
         d_cube = np.max(cube, axis=0) - np.min(cube, axis=0)
         this_hot *= np.where(d_cube <= pars[2] * ave_cube, 1, 0)
@@ -2772,7 +2774,7 @@ def hotpix(darkfiles, formatpars, tslices, pars, verbose):
     return np.where(this_hot > 0)
 
 
-def hotpix_ipc(y, x, darkfiles, formatpars, tslices, pars, verbose):
+def hotpix_ipc(y, x, darkfiles, formatpars, tslices, pars, verbose, tstart=1):
     """
     Return IPC data from a list of hot pixels.
 
@@ -2792,6 +2794,8 @@ def hotpix_ipc(y, x, darkfiles, formatpars, tslices, pars, verbose):
         the non-linearity should be referenced to a median stack of initial image.
     verbose : bool
         Whether to talk a lot.
+    tstart: int, optional
+        Index of the first time slice to use. Defaults to 1.
 
     Returns
     -------
@@ -2851,7 +2855,7 @@ def hotpix_ipc(y, x, darkfiles, formatpars, tslices, pars, verbose):
     # now make data cube
     for jt in range(nt):
         for f in range(ndarks):
-            CDS = load_segment(darkfiles[f], formatpars, [0, N, 0, N], [1, tslices[jt]], False)
+            CDS = load_segment(darkfiles[f], formatpars, [0, N, 0, N], [tstart, tslices[jt]], False)
             cube[f, :, :] = CDS[0, :, :] - CDS[1, :, :]
             if do_nonlin:
                 # non-linearity correction, if turned on
