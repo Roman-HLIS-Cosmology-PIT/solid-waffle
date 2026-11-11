@@ -290,7 +290,9 @@ def test_intlin(tmp_path):
             build_linearity_file(tmp_path + "/linearity.json")
         else:
             build_linearity_file(json.loads(LINEARITY_JSON.replace(r"$TMPDIR", tmp_path)))
-        with asdf.open(tmp_path + "/roman_wfi_linearitylegendre_DUMMY99999999_SCA06.asdf") as af:
+        with asdf.open(tmp_path + "/roman_wfi_linearitylegendre_DUMMY99999999_SCA06.asdf") as af, fits.open(
+            tmp_path + "/roman_wfi_linearitylegendre_DUMMY99999999_SCA06.fits"
+        ) as ff:
             print(af.info(max_rows=None))
 
             # shapes
@@ -341,6 +343,26 @@ def test_intlin(tmp_path):
             assert meta["telescope"] == "ROMAN"
             for _x in ["author", "date", "description", "pedigree", "useafter"]:
                 assert meta[_x] is not None
+
+            # ASDF - FITS output consistency
+            assert np.allclose(af["roman"]["data"], ff[0].data[:6], rtol=1.0e-6)
+            for sl, leaf in enumerate(["Smin", "Sref", "Smax", "maxerr", "dq"]):
+                print(sl, leaf)
+                if sl == 3:
+                    c = np.clip(np.round(ff[0].data[6 + sl]), 0, 65535).astype(np.int16) - af["roman"][
+                        leaf
+                    ].astype(np.int16)
+                    assert np.all(np.abs(c) <= 1)
+                else:
+                    assert np.allclose(af["roman"][leaf], ff[0].data[6 + sl])
+            for ll in range(6):
+                assert ff[0].header[f"SLICE{ll+1:03d}"] == f"Legendre coef L={ll:d}"
+            assert ff[0].header["SLICE007"] == "min signal in fit"
+            assert ff[0].header["SLICE008"] == "ref signal in fit (usually bias level; slope=1)"
+            assert ff[0].header["SLICE009"] == "max signal in fit"
+            assert ff[0].header["SLICE010"] == "max error"
+            assert ff[0].header["SLICE011"][:7] == "quality"
+            assert np.allclose(af["roman"]["pflat"], ff["PFLAT"].data, rtol=1.0e-6)
 
     # test exceptions
     with pytest.raises(ValueError):
