@@ -371,13 +371,13 @@ def build_linearity_file(infile):
     Im.header["P_ORDER"] = p_order
     Im.header["NSIDE_Y"] = nside
     Im.header["NSIDE_X"] = nside
-    for L in range(p_order):
+    for L in range(p_order + 1):
         Im.header[f"SLICE{L+1:03d}"] = f"Legendre coef L={L:d}"
-    Im.header[f"SLICE{p_order+1:03d}"] = "min signal in fit"
-    Im.header[f"SLICE{p_order+2:03d}"] = "ref signal in fit (usually bias level; slope=1)"
-    Im.header[f"SLICE{p_order+3:03d}"] = "max signal in fit"
-    Im.header[f"SLICE{p_order+4:03d}"] = "max error"
-    Im.header[f"SLICE{p_order+5:03d}"] = "quality"
+    Im.header[f"SLICE{p_order+2:03d}"] = "min signal in fit"
+    Im.header[f"SLICE{p_order+3:03d}"] = "ref signal in fit (usually bias level; slope=1)"
+    Im.header[f"SLICE{p_order+4:03d}"] = "max signal in fit"
+    Im.header[f"SLICE{p_order+5:03d}"] = "max error"
+    Im.header[f"SLICE{p_order+6:03d}"] = "quality"
     Im.header["QBIT20"] = "Bit 20: failed or unstable nonlinearity solution"
     Im.header["QBIT31"] = "Bit 31: ref pixel"
 
