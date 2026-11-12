@@ -172,5 +172,5 @@ def main(input_dir=None, output_dir=None, fmatch="*.asdf", format="wfi_tvac"):
             fits.HDUList([h, h2]).writeto(new_file_path, overwrite=True)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main(format=sys.argv[1] if len(sys.argv) > 1 else "wfi_tvac")

@@ -650,5 +650,5 @@ def run_noise(arglist, verbose=False):
     hdul.writeto(outfile, overwrite=True)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     run_noise(sys.argv, verbose=True)
