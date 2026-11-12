@@ -11,7 +11,7 @@ build_linearity_file
 import json
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import asdf
 import numpy as np
@@ -406,7 +406,7 @@ def build_linearity_file(infile):
                 "description": "linearity_run.py",
                 "instrument": {"detector": "WFI{:02d}".format(int(pars["SCA"])), "name": "WFI"},
                 "origin": "PIT - solid-waffle",
-                "date": datetime.now(timezone.utc).isoformat(),
+                "date": datetime.now(UTC).isoformat(),
                 "pedigree": pedigree,
                 "reftype": "LINEARITYLEGENDRE",
                 "telescope": "ROMAN",

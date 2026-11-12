@@ -84,7 +84,7 @@ for filename in flist1:
         elist.append(e)
 # Sort in order of set & exposure number
 #
-u = sorted(zip(slist, elist, flist))
+u = sorted(zip(slist, elist, flist, strict=False))
 Xfiles = [x for _, _, x in u]
 Xsets = [x for x, _, _ in u]
 Xexposures = [x for _, x, _ in u]
