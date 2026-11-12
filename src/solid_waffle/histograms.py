@@ -107,5 +107,5 @@ def main(argv):
     numpy.savetxt(outfile, hist, fmt="%7d")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main(sys.argv)

@@ -499,5 +499,5 @@ def run_config(filename):
     sim.run(verbose=True)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     run_config(sys.argv[1])

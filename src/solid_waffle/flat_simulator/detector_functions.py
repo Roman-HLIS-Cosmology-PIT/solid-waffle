@@ -421,5 +421,5 @@ def _main():
     print(np.around(np.fliplr(input_bfe_a), 4))
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     _main()
