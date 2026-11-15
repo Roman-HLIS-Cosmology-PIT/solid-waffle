@@ -21,6 +21,7 @@ import re
 import shutil
 import sys
 import time
+import warnings
 
 import matplotlib
 import numpy as np
@@ -890,8 +891,8 @@ class Config:
         self.used_2a = False
         if len(self.tslicesM2a) != 4 or self.tslicesM2a[-1] <= self.tslicesM2a[-2]:
             if verbose:
-                print(
-                    "Error: tslicesM2a =", self.tslicesM2a, "does not have length 4 or has insufficient span."
+                warnings.warn(
+                    "tslicesM2a =", self.tslicesM2a, "does not have length 4 or has insufficient span."
                 )
                 print("Skipping Method 2a ...")
         else:
@@ -986,7 +987,7 @@ class Config:
         #
         self.used_2b = False
         if len(self.tslicesM2b) != 4 or self.tslicesM2b[-1] <= self.tslicesM2b[-2]:
-            print("Error: tslicesM2b =", self.tslicesM2b, "does not have length 4 or has insufficient span.")
+            warnings.warn("tslicesM2b =", self.tslicesM2b, "does not have length 4 or has insufficient span.")
             print("Skipping Method 2b ...")
         else:
             # Proceed to implement Method 2b
@@ -1077,8 +1078,8 @@ class Config:
         self.used_3 = False
         if len(self.tslicesM3) != 4 or self.tslicesM3[-1] <= self.tslicesM3[-2]:
             if verbose:
-                print(
-                    "Error: tslicesM3 =", self.tslicesM3, "does not have length 4 or has insufficient span."
+                warnings.warn(
+                    "tslicesM3 =", self.tslicesM3, "does not have length 4 or has insufficient span."
                 )
                 print("Skipping Method 3 ...")
         else:
