@@ -339,7 +339,7 @@ def build_linearity_file(infile):
                 # this is to get dP_L(z)/dz, which is equal to sum_{L'<L, L-L' odd} (2L'+1) P_L'(z)
                 dPl = np.zeros((nside, dx))
                 for Lp in range((L - 1) % 2, L, 2):
-                    dPl += (2 * Lp + 1) * eval_legendre(Lp, zbias)
+                    dPl += (2 * Lp + 1) * eval_legendre(Lp, z)
                 Sprime += coef[L, :, :] * dPl
                 del dPl
             dq[:, xmin:xmax] |= np.where(Sprime <= 0, 2**20, 0).astype(np.uint32)
