@@ -984,7 +984,7 @@ class Config:
         #
         self.used_2b = False
         if len(self.tslicesM2b) != 4 or self.tslicesM2b[-1] <= self.tslicesM2b[-2]:
-            print("tslicesM2b =", self.tslicesM2b, "does not have length 4 or has insufficient span.")
+            print("Warning: tslicesM2b =", self.tslicesM2b, "does not have length 4 or has insufficient span.")
             print("Skipping Method 2b ...")
         else:
             # Proceed to implement Method 2b
