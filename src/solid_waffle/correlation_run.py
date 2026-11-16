@@ -2464,7 +2464,7 @@ def run_vis_all(infile, run_ir_first=True):
 
 ### <== MAIN PROGRAM BELOW HERE ==> ###
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     """Main run."""
 
     run_ir_all(sys.argv[1])

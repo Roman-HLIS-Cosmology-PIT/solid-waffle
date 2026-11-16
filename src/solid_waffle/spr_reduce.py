@@ -439,5 +439,5 @@ def run_spr_reduce(arglist, verbose=False):
         print(f"Number of masked pixels = {int(np.sum(dmask)):d}/{nx*ny:d}")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     run_spr_reduce(sys.argv, verbose=True)

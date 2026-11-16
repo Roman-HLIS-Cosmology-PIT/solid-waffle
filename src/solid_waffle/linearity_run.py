@@ -431,5 +431,5 @@ def build_linearity_file(infile):
     asdf.AsdfFile(tree).write_to(pars["OUTPUT"][:-5] + ".asdf")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     build_linearity_file(sys.argv[1])
